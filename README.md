@@ -8,30 +8,30 @@ Local-first VS Code extension for understanding test inventory, coverage, qualit
 - FastAPI: pytest, coverage.py XML/JSON
 - Firebase Functions: Jest/Mocha-style projects under `functions/`, Istanbul/LCOV
 
-## MVP Features
+## Current Features
 
-- Activity Bar container with Projects, Tests, Coverage, Quality, and Changed Files views.
-- Dashboard editor with KPIs, coverage bar, project inventory, changed-file risk, and quality findings.
+- Activity Bar container with a Case File view.
+- Case File panel that names theater, weak, missing, and strong tests.
 - Adapter-based framework detection.
 - Static test discovery for common file patterns.
 - Quality findings for skipped/focused tests, weak/no assertions, and snapshot-only JS tests.
 - LCOV and coverage.py XML/JSON parsers.
 - Git changed-file analysis with likely related tests and recommended commands.
-- Commands for refresh, discovery, running tests, reading coverage, changed-file risk, and Markdown report export.
+- Optional AI reviewer for OpenAI, Claude, or Gemini.
+  - API keys are stored in VS Code SecretStorage.
+  - Keys are entered with hidden input and can be replaced or deleted.
+  - Code is sent only after explicit confirmation.
+  - AI claims are shown only after line/excerpt anchors are verified against the real file content.
+- Commands for refresh, opening the Case File, configuring the optional reviewer, and Markdown export.
 - Unit tests for detection, parsers, changed-file mapping, and report rendering.
 
 ## Commands
 
-- `Test Inspector: Refresh Projects`
-- `Test Inspector: Refresh All`
-- `Test Inspector: Open Dashboard`
-- `Test Inspector: Discover Tests`
-- `Test Inspector: Run All Tests`
+- `Test Inspector: Refresh`
+- `Test Inspector: Open Case File`
+- `Test Inspector: Configure LLM (optional reviewer)`
 - `Test Inspector: Run Tests In Current File`
-- `Test Inspector: Run Related Tests For Current File`
-- `Test Inspector: Generate Coverage Report`
-- `Test Inspector: Show Changed File Test Risk`
-- `Test Inspector: Export Test Report`
+- `Test Inspector: Export Case File`
 
 ## Development
 
@@ -48,4 +48,4 @@ The product roadmap and implementation checklist live in [ROADMAP.md](./ROADMAP.
 
 ## Limitations
 
-This first version is intentionally local and deterministic. It does not include an LLM layer, full import-graph analysis, flaky-test detection, or a custom webview dashboard. Python test result parsing is conservative in the MVP: pytest/Django commands run locally, while detailed test case inventory comes from static discovery unless a supported report parser is added later.
+The deterministic Case File remains the source of truth. The optional AI reviewer can explain or challenge a verdict, but its output is constrained: unverified line anchors are dropped, uncertainty is displayed, and suggested fixes are treated as advisory. Python test result parsing is conservative: pytest/Django commands run locally, while detailed test case inventory comes from static discovery unless a supported report parser is added later.

@@ -2,7 +2,7 @@
   "name": "test-inspector",
   "displayName": "Test Inspector",
   "description": "Local-first test detective for React, Vue, Flutter, Django, FastAPI, Firebase Functions, and Node.js — names which tests are theater, which are weak, and what's missing. The tool only informs; you fix.",
-  "version": "0.0.7",
+  "version": "1.0.0",
   "publisher": "local",
   "engines": {
     "vscode": "^1.90.0"
@@ -20,9 +20,14 @@
   },
   "homepage": "https://github.com/da0101/test-inspector#readme",
   "activationEvents": [
+    "onStartupFinished",
     "onView:testInspector.cases",
+    "onView:testInspector.reviewer",
+    "onCommand:testInspector.scan",
     "onCommand:testInspector.openCaseFile",
     "onCommand:testInspector.refresh",
+    "onCommand:testInspector.refreshAll",
+    "onCommand:testInspector.openDashboard",
     "onCommand:testInspector.configureLlm",
     "onCommand:testInspector.runCurrentFile",
     "onCommand:testInspector.exportCaseFile"
@@ -43,13 +48,18 @@
         {
           "id": "testInspector.cases",
           "name": "Cases"
+        },
+        {
+          "id": "testInspector.reviewer",
+          "name": "AI Reviewer",
+          "type": "webview"
         }
       ]
     },
     "viewsWelcome": [
       {
         "view": "testInspector.cases",
-        "contents": "Test Inspector finds tests that are **theater**, **weak**, or **missing** — without running them.\n\nScanning starts automatically when you open this view. If nothing appears below, the workspace doesn't contain a recognized test project (Flutter, React, Vue, Django, FastAPI, Firebase Functions, Node).\n\n[Scan this workspace now](command:testInspector.refresh)\n[Open Case File panel](command:testInspector.openCaseFile)"
+        "contents": "Test Inspector finds tests that are **theater**, **weak**, or **missing** — without running them.\n\nScanning starts automatically when you open this view. If nothing appears below, click scan.\n\n[Scan this workspace now](command:testInspector.scan)\n[Open Case File panel](command:testInspector.openCaseFile)"
       }
     ],
     "commands": [
@@ -62,6 +72,21 @@
         "command": "testInspector.refresh",
         "title": "Test Inspector: Refresh",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "testInspector.scan",
+        "title": "Test Inspector: Scan Workspace",
+        "icon": "$(search)"
+      },
+      {
+        "command": "testInspector.refreshAll",
+        "title": "Test Inspector: Refresh All",
+        "icon": "$(sync)"
+      },
+      {
+        "command": "testInspector.openDashboard",
+        "title": "Test Inspector: Open Case File",
+        "icon": "$(inspect)"
       },
       {
         "command": "testInspector.configureLlm",
@@ -87,9 +112,14 @@
           "group": "navigation@0"
         },
         {
-          "command": "testInspector.refresh",
+          "command": "testInspector.scan",
           "when": "view == testInspector.cases",
           "group": "navigation@1"
+        },
+        {
+          "command": "testInspector.configureLlm",
+          "when": "view == testInspector.cases",
+          "group": "navigation@2"
         }
       ]
     },
@@ -106,15 +136,36 @@
           "default": 8000,
           "description": "Maximum files scanned per workspace folder."
         },
-        "testInspector.llm.baseUrl": {
+        "testInspector.llm.provider": {
+          "type": "string",
+          "default": "none",
+          "enum": [
+            "none",
+            "openai",
+            "claude",
+            "gemini"
+          ],
+          "description": "Optional AI reviewer provider. API keys are stored in VS Code SecretStorage, not settings."
+        },
+        "testInspector.llm.openaiBaseUrl": {
           "type": "string",
           "default": "https://api.openai.com/v1",
-          "description": "OpenAI-compatible chat completions base URL for the optional Reviewer co-worker. Must be https (or http for localhost)."
+          "description": "OpenAI-compatible chat completions base URL for the optional reviewer. Must be https (or http for localhost)."
+        },
+        "testInspector.llm.claudeBaseUrl": {
+          "type": "string",
+          "default": "https://api.anthropic.com/v1/messages",
+          "description": "Anthropic Messages API URL for the optional reviewer. Must be https."
+        },
+        "testInspector.llm.geminiBaseUrl": {
+          "type": "string",
+          "default": "https://generativelanguage.googleapis.com/v1beta",
+          "description": "Gemini API base URL for the optional reviewer. Must be https."
         },
         "testInspector.llm.model": {
           "type": "string",
-          "default": "gpt-4.1-mini",
-          "description": "Model used by the optional Reviewer co-worker for cross-card pattern analysis and Ask-the-reviewer chat."
+          "default": "",
+          "description": "Model used by the optional reviewer. Leave empty to use the selected provider default."
         }
       }
     }

@@ -366,14 +366,14 @@ Tasks:
   - choose model
   - test connection
 - [x] Add privacy confirmation before sending code.
-- [ ] Add per-workspace enable/disable setting.
-- [ ] Add prompt builder with token budgeting.
+- [x] Add per-workspace enable/disable setting.
+- [x] Add prompt builder with token budgeting.
 - [ ] Chunk large source/test files safely.
 - [ ] Cache LLM results by file hash.
 - [ ] Add retry/backoff/rate-limit handling.
-- [ ] Add JSON output mode for structured findings.
+- [x] Add JSON output mode for structured findings.
 - [ ] Add markdown fallback if JSON parsing fails.
-- [ ] Add LLM review for one source/test pair.
+- [x] Add LLM review for one source/test pair.
 - [ ] Add LLM review for changed files.
 - [ ] Add LLM review for top N risks.
 - [ ] Add LLM review for weak tests.
@@ -384,7 +384,7 @@ Tasks:
   - edge cases
   - suggested tests
   - risk severity
-- [ ] Add tests using mocked LLM responses.
+- [x] Add tests using mocked LLM responses.
 
 ### Phase 8: Dashboard Productization
 

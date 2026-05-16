@@ -1,24 +1,31 @@
 import * as crypto from 'node:crypto';
 import * as vscode from 'vscode';
 import { renderCaseFileHtml } from './template';
-import { emptyBundle, type CaseFileBundle } from '../../services/caseFile';
+import { emptyBundle, type CaseFile, type CaseFileAiReview, type CaseFileBundle } from '../../services/caseFile';
 
 type IncomingMessage =
   | { type: 'open'; path?: string }
   | { type: 'copy'; text?: string }
   | { type: 'evidence'; path?: string }
+  | { type: 'aiReview'; path?: string }
   | { type: 'review'; path?: string }
   | { type: 'rescan'; path?: string };
+
+type CaseFilePanelOptions = {
+  onAiReview?: (caseFile: CaseFile, bundle: CaseFileBundle) => Promise<CaseFileAiReview>;
+};
 
 export class CaseFilePanel {
   private static current: CaseFilePanel | undefined;
   private readonly panel: vscode.WebviewPanel;
   private bundle: CaseFileBundle;
   private disposed = false;
+  private options: CaseFilePanelOptions;
 
-  private constructor(panel: vscode.WebviewPanel, initial: CaseFileBundle) {
+  private constructor(panel: vscode.WebviewPanel, initial: CaseFileBundle, options: CaseFilePanelOptions) {
     this.panel = panel;
     this.bundle = initial;
+    this.options = options;
     this.panel.onDidDispose(() => {
       this.disposed = true;
       if (CaseFilePanel.current === this) {
@@ -29,8 +36,9 @@ export class CaseFilePanel {
     this.render();
   }
 
-  static show(context: vscode.ExtensionContext): CaseFilePanel {
+  static show(context: vscode.ExtensionContext, options: CaseFilePanelOptions = {}): CaseFilePanel {
     if (CaseFilePanel.current && !CaseFilePanel.current.disposed) {
+      CaseFilePanel.current.options = options;
       CaseFilePanel.current.panel.reveal();
       return CaseFilePanel.current;
     }
@@ -41,7 +49,7 @@ export class CaseFilePanel {
       { enableScripts: true, retainContextWhenHidden: true },
     );
     panel.iconPath = vscode.Uri.joinPath(context.extensionUri, 'media', 'test-inspector.svg');
-    CaseFilePanel.current = new CaseFilePanel(panel, emptyBundle());
+    CaseFilePanel.current = new CaseFilePanel(panel, emptyBundle(), options);
     return CaseFilePanel.current;
   }
 
@@ -77,9 +85,26 @@ export class CaseFilePanel {
       case 'rescan':
         void vscode.commands.executeCommand('testInspector.refresh');
         return;
+      case 'aiReview':
+        if (msg.path) {
+          void this.reviewWithAi(msg.path);
+        }
+        return;
       case 'evidence':
         // Handled client-side in the webview script (toggle visibility).
         return;
     }
+  }
+
+  private async reviewWithAi(filePath: string): Promise<void> {
+    const target = this.bundle.cases.find((c) => c.target.path === filePath);
+    if (!target || !this.options.onAiReview) {
+      void vscode.window.showWarningMessage('Test Inspector: AI reviewer is not configured.');
+      this.render();
+      return;
+    }
+    const review = await this.options.onAiReview(target, this.bundle);
+    this.bundle.cases = this.bundle.cases.map((c) => (c.target.path === filePath ? { ...c, aiReview: review } : c));
+    this.render();
   }
 }

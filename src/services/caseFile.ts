@@ -37,7 +37,28 @@ export type CaseFile = {
     text: string;
     nextTestSketch?: string;
   };
+  aiReview?: CaseFileAiReview;
 };
+
+export type CaseFileAiReview =
+  | {
+      status: 'accepted' | 'challenged';
+      provider: string;
+      model: string;
+      reviewedAt: number;
+      explanation: string;
+      evidenceAnchors: Array<{ lineNumber: number; excerpt: string; issue: string }>;
+      suggestedFix: { summary: string; pseudocode?: string };
+      uncertaintyNotes?: string;
+      droppedAnchors: number;
+    }
+  | {
+      status: 'error';
+      provider?: string;
+      model?: string;
+      reviewedAt: number;
+      error: string;
+    };
 
 export type CaseFileBundle = {
   scanTimestamp: number;

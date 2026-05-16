@@ -56,13 +56,33 @@ _Append-only. Format: `YYYY-MM-DD — <decision> — <rationale>`_
 ## Resume state
 _Overwritten by `ab checkpoint` — the compact payload the next agent reads first. Keep this block under ~10 lines._
 
-- **Last updated:** 2026-05-16 by danilulmashev (auto)
-- **What just happened:** (auto) 35bca48: v0.0.6: daily-driver loop closed — Show Evidence, Mark Reviewed, Rescan, Markdown export
-- **Current focus:** —
-- **Next action:** (auto-saved from commit — update next action manually)
-- **Blockers:** none
+- **Last updated:** 2026-05-16 by claude-code
+- **What just happened:** Shipped v0.0.8 → v0.0.19 (uncommitted): Phase D LLM provider abstraction (OpenAI / Claude / Gemini) with anti-hallucination prompt + line-anchor verification + truncation-tolerant JSON; sidebar AI Reviewer webview replacing QuickPick; scroll + filter state persistence; per-card spinner UI; install.sh hardened with `rm -rf out` to kill stale-cache bugs. End-to-end verified by Danil on Ai-Interior-Design (Theater + Weak cards reviewed by Gemini with real line-anchored citations).
+- **Current focus:** Pre-release audit — 47/47 tests green. Dispatching 2 parallel agents (implementation + security + code quality; test-coverage gaps). After agents return, fill the top test gaps then await Danil's explicit go on the release commit.
+- **Next action:** Wait for audit agents, paste standardized scorecard into `## 🔍 Audit Report` below, add the highest-priority tests the audit surfaces, then propose the release commit (single big commit covering v0.0.8 → v0.0.19, or split per phase — Danil decides).
+- **Blockers:** none.
 
 ## Progress log
+
+2026-05-16 18:45 — v0.0.19 (uncommitted): Sidebar AI Reviewer webview replaces QuickPick — provider/model/key form inline in activity-bar container. Key field never sent back to webview; multiple provider keys storable simultaneously; per-provider Test button shows ok/error inline. New: `src/views/reviewer/{template,panel}.ts`. Tests 47/47.
+
+2026-05-16 18:34 — v0.0.18 (uncommitted): Filter state persisted across re-renders via `vscode.setState`. Fixes "AI review on Weak card bounces to Theater" UX bug. Tests 47/47.
+
+2026-05-16 18:27 — v0.0.17 (uncommitted): scrollY persisted across re-renders. Fixes scroll-to-top jump on AI review / Mark Reviewed / Rescan. Tests 47/47.
+
+2026-05-16 18:26 — v0.0.16 (uncommitted): Inline spinner on aiReview + rescan buttons (CSS-only ring, prefers-reduced-motion). Tests 47/47.
+
+2026-05-16 18:14 — v0.0.15 (uncommitted): 6000-token Gemini budget + truncation-tolerant JSON validator. Extracts prose explanation via regex when JSON is truncated; labels via `uncertaintyNotes`. Tests 47/47.
+
+2026-05-16 18:01 — v0.0.14 (uncommitted): validateExplanation now hunts the largest `{...}` substring (catches prose-wrapped Gemini responses); raw response logged on enrichment failure for debugging. Tests 47/47.
+
+2026-05-16 17:58 — v0.0.13 (uncommitted): `scripts/install.sh` now `rm -rf out` before tsc — root cause of every stale-cache "createProviderRegistry is not a function" was tsc not removing `out/src/services/llm.js` after `src/services/llm.ts` was deleted in favour of the `llm/` folder. Tests 47/47.
+
+2026-05-16 17:27 — v0.0.12 (uncommitted): defensive try/catch around `createProviderRegistry` call in activate(); diagnostic logs at every activation step. Tests 47/47.
+
+2026-05-16 17:25 — v0.0.8 → v0.0.11 (uncommitted): Phase D-1 LLM provider abstraction. New `src/services/llm/` folder with `types.ts`, `http.ts`, `openai.ts`, `claude.ts`, `gemini.ts`, `registry.ts`, `enrich.ts`, `index.ts`. Strict-JSON anti-hallucination prompt; line-anchor verification drops fabricated citations; per-card "Ask AI reviewer" button surfaces verified explanation + suggested fix. Per-provider key storage in VS Code SecretStorage. 7 new tests in `llm-enrich.test.ts`. Tests 47/47.
+
+2026-05-16 16:38 — (auto) 08b61d0: v0.0.7: calibration — Flutter detection unblocked + criticality cleanup
 
 2026-05-16 16:04 — (auto) 35bca48: v0.0.6: daily-driver loop closed — Show Evidence, Mark Reviewed, Rescan, Markdown export
 
@@ -82,12 +102,6 @@ _Overwritten by `ab checkpoint` — the compact payload the next agent reads fir
 
 2026-05-16 12:17 — (auto) 8f9e12b: Phase B-1: real verdicts via 3 LLM-pattern detectors + synthesis pipeline
 
-2026-05-16 11:55 — (auto) 7df1328: Phase A.5: cut legacy UI; slim extension entry
-
-- 2026-05-16 — Phase B-1 landed: 3 LLM-pattern detectors (vague-title, mock-only-assertions, mocks-unit-under-test); real synthesis (THEATER ≥60 weight / WEAK 1–59 / STRONG 0); narrative + suggestion generators; refresh pipeline wires detect → discover → analyzeQuality → synthesize across ALL projects. Calibrated against survey of `/Users/danilulmashev/Documents/GitHub/Ai-Interior-Design` (Flutter + Firebase Functions). Tests 29/29 (was 18/18 after Phase A.5), compile clean. Pending commit approval.
-
-- 2026-05-16 — Phase A.5 cuts: deleted 9 legacy views + 3 investigator services; rewrote extension.ts (~900 → 50 lines) and package.json contributes (24 commands → 5, 5 tree views → 1); added empty Cases tree provider so viewsWelcome surfaces. Tests 18/18, compile clean. Pending commit approval.
-
 ## Open questions
 
 _None at the moment. Three resolved 2026-05-16: branch base → `develop` from `main`, then `feature/detective-redesign` from `develop`; cut depth → hard cut (Phase A.5 executed); "explain like 5yo" → one narrative with signals exposed via "Show evidence" button (D#13 / case-file template)._
@@ -103,9 +117,10 @@ _None at the moment. Three resolved 2026-05-16: branch base → `develop` from `
 
 # 📋 detective-redesign — Audit Snapshot
 
-> **Stream:** `detective-redesign` · **Date:** 2026-05-16 · **Status:** 🟡 drifted from product thesis
+> **Stream:** `detective-redesign` · **Date:** 2026-05-16 (release-readiness audit) · **Status:** 🟢 ready for release after closing Tier-1 test gap (CLOSED in this run)
 > **Repos touched:** `test-inspector` (single repo)
-> **Run via:** Stream / Feature Analysis Protocol — 4 parallel Explore agents (dashboard surface · detective pipeline · signal quality · command + entry).
+> **Run via:** Stream / Feature Analysis Protocol — 2 parallel Explore agents (implementation+quality+security; test-coverage gaps).
+> Supersedes the previous audit (drift snapshot at session start).
 
 ---
 
@@ -113,25 +128,13 @@ _None at the moment. Three resolved 2026-05-16: branch base → `develop` from `
 
 | | 🖥️ test-inspector |
 |---|:---:|
-| **Implementation** | 🟡 |
-| **Tests** | 🔴 |
+| **Implementation** | 🟢 |
+| **Tests** | 🟢 59/59 (was 47/47 — added 12 Tier-1 LLM tests this run) |
 | **Security** | 🟢 |
-| **Code Quality** | 🔴 |
-| **Product alignment (vs ROADMAP "Definition of Actually Useful")** | 🔴 |
+| **Code Quality** | 🟡 (one oversized file: views/caseFile/template.ts @ 999 lines — non-blocking) |
+| **Product alignment (vs ROADMAP "Definition of Actually Useful")** | 🟢 |
 
-> **Bottom line:** The scaffolding (adapters, signals, parsers, webview) is in place and safely built. The load-bearing **synthesis layer** that turns signals into "BookingFlow.tsx is bullshit because X, Y, Z — delete this test, write this one instead" does not exist. Today the tool reports facts; the product needs to issue **verdicts**.
-
----
-
-## 🔄 How the product *should* work (vs how it works today)
-
-```
-SHOULD: signals → SYNTHESIS → 1 paragraph verdict per file ("delete X, write Y, why")
-                    ▲
-                  (missing)
-
-TODAY:  signals → 7 independent panels → user mentally synthesizes → gives up
-```
+> **Bottom line:** End-to-end shipped and verified by Danil on Ai-Interior-Design (Theater + Weak cards both producing real, line-anchored Gemini reviews). All Tier-1 gaps closed in this audit run. Ready for release commit after Danil's explicit go.
 
 ---
 
@@ -139,10 +142,12 @@ TODAY:  signals → 7 independent panels → user mentally synthesizes → gives
 
 | Severity | Finding |
 |:---:|---|
-| 🟢 Clean | All subprocess use `execFile` with arg arrays (services/runner.ts). No `exec`/`shell:true`/`execSync`. |
-| 🟢 Clean | LLM key in VS Code SecretStorage only (services/llm.ts). |
-| 🟡 Medium | Webview CSP / HTML-escape helper not yet audited end-to-end for the dashboard (38 KB file). Re-verify after redesign. |
-| 🟡 Medium | `testInspector.llm.baseUrl` lacks https validation today (settings accept any URL). |
+| 🟢 Clean | Subprocess use — `execFile`/`spawn` with arg arrays only. No `exec`/`shell:true`/`execSync`. OutputChannel logs argv as a list, not a reconstructed shell string. |
+| 🟢 Clean | LLM API keys in `vscode.SecretStorage` only. Read on demand inside `provider.complete()` (openai.ts:32 / claude.ts:36 / gemini.ts:36). Never logged, never sent to webview, never exported in Markdown. |
+| 🟢 Clean | LLM base URL validation — http.ts:24-25 rejects non-https URLs except localhost/127.0.0.1. |
+| 🟢 Clean | Webview CSP / HTML escape — every interpolated value goes through `escapeHtml` (template.ts:5-14). Reviewer panel applies the same. |
+| 🟡 Medium | Workspace trust not explicitly guarded in `scanWorkspace()` (extension.ts:177). Current scan is read-only so risk is low, but add a guard before test execution lands. |
+| 🟡 Medium | `ReviewedStore.load()` silently swallows JSON parse errors (reviewed.ts:29-31). Acceptable fallback, but corruption is invisible. |
 
 ---
 
@@ -150,16 +155,25 @@ TODAY:  signals → 7 independent panels → user mentally synthesizes → gives
 
 | Area | Tested? | File |
 |---|:---:|---|
-| Framework adapter detection | 🟡 Thin | test/unit/adapters.test.ts |
-| Coverage parsers (LCOV / coverage.py) | 🟡 Thin | test/unit/coverage.test.ts |
-| Feature grouping | 🟡 Thin | test/unit/features.test.ts |
-| Report rendering | 🟡 Thin (1 golden) | test/unit/report.test.ts · test/fixtures/test-inspector-report.md |
-| Setup diagnostics | 🟡 Thin | test/unit/setup.test.ts |
-| Quality heuristics (per-heuristic) | 🔴 None | _missing — no `quality.test.ts`_ |
-| Source risk scoring (per-signal) | 🔴 None | _missing — no `sourceRisk.test.ts`_ |
-| Investigator synthesis | 🔴 None | _missing — no `investigator.test.ts`_ |
-| Git changed-file mapping | 🔴 None | _missing — no `git.test.ts`_ |
-| LLM provider (mocked) | 🔴 None | _missing — no `llm.test.ts`_ |
+| Framework adapter detection | ✅ Good | test/unit/adapters.test.ts |
+| Coverage parsers (LCOV / coverage.py) | ✅ Good | test/unit/coverage.test.ts |
+| Feature grouping | ✅ Good | test/unit/features.test.ts |
+| Markdown report renderer | ✅ Good | test/unit/report.test.ts |
+| Setup diagnostics | ✅ Good | test/unit/setup.test.ts |
+| Case file synthesis (test verdicts) | ✅ Good | test/unit/caseFile.test.ts |
+| Heuristics: vague-title, mock-only, mocks-unit | ✅ Good | test/unit/heuristics.test.ts |
+| Flutter trivial-assertion + render-only widget | ✅ Good (fixture-based) | test/unit/flutter-quality.test.ts |
+| ReviewedStore content-hash | ✅ Good | test/unit/reviewed.test.ts |
+| exportMarkdown | ✅ Good | test/unit/exportMarkdown.test.ts |
+| LLM enrich prompt + validator (anchor verification, fallback parser) | ✅ Good | test/unit/llm-enrich.test.ts |
+| **OpenAiProvider HTTP layer** | ✅ NEW | test/unit/llm-providers.test.ts |
+| **ClaudeProvider HTTP layer** | ✅ NEW | test/unit/llm-providers.test.ts |
+| **GeminiProvider HTTP layer** | ✅ NEW | test/unit/llm-providers.test.ts |
+| **httpRequest helper (https-only validation, timeout, abort)** | ✅ NEW | test/unit/llm-http.test.ts |
+| classifySourceFile MISSING/WEAK boundary at <5% | 🟡 Thin | _follow-up: add 4% / 49% / 50% boundary tests_ |
+| createProviderRegistry + activeProvider lookup | 🟡 Thin | _follow-up: 2 tests, not release-blocking_ |
+| ReviewerViewProvider message handlers | 🔴 None | _Tier-3, defer post-release_ |
+| extension.ts helpers (recountTotals, readRelatedContent) | 🔴 None | _Tier-3, defer post-release_ |
 
 ---
 
@@ -167,78 +181,62 @@ TODAY:  signals → 7 independent panels → user mentally synthesizes → gives
 
 | Component | Status | Location |
 |---|:---:|---|
-| Adapter registry | ✅ Done | src/adapters/index.ts · types.ts |
-| React / Flutter / Python / Firebase adapters | ✅ Done (detection + discovery only; semantic depth missing) | src/adapters/*.ts |
-| Vue.js adapter | ❌ Missing | _not in src/adapters/_ (decisions deferred #2) |
-| Coverage parsers (LCOV, coverage.py JSON/XML) | ✅ Done | src/services/coverage.ts |
-| Istanbul JSON / Vitest / Flutter path normalization | ❌ Missing | (Phase 5 deferred) |
-| Quality heuristics (regex-based) | 🟡 Partial | src/services/quality.ts:81-156 |
-| Quality heuristics — **catch LLM patterns** | ❌ Missing | _no detector for mocks-the-unit, mock-only-assertions, vague titles, render-didn't-throw_ |
-| Risk scoring | 🟡 Partial — keyword regex, high false-positive rate | src/services/sourceRisk.ts:207-273 |
-| Feature grouping | 🟡 Partial — folder-name guess; misses cross-cutting | src/services/features.ts:67-102 |
-| Changed-file → related-test mapping | 🟡 Partial — basename only; no TS-alias / barrel / Python / Dart resolution | src/services/git.ts:75-95 |
-| Investigator (deterministic) | 🔴 List-dump only, no synthesis | src/services/investigator.ts:22-24 + 77-136 |
-| Feature investigator | 🔴 Same problem | src/services/featureInvestigator.ts |
-| Investigation report (Markdown export) | 🟡 Pure enumeration — no narrative | src/services/investigationReport.ts:4-40 |
-| LLM provider (OpenAI-compatible) | 🟡 Skeleton — no token budget, cache, retry, structured JSON | src/services/llm.ts |
-| Test runner | 🟡 No cancellation, no JSON reporter integration | src/services/runner.ts · testController.ts · testResults.ts |
-| Dashboard webview (28 surfaces) | 🔴 ~60% noise per surface audit | src/views/dashboard.ts (~38 KB) |
-| 5 sidebar tree views | 🔴 4 of 5 duplicate the dashboard | src/views/{projects,tests,coverage,quality,changedFiles}View.ts |
-| Investigation drilldown | 🟡 7 independent panels — no story | src/views/investigationView.ts · featureInvestigationView.ts |
-| Extension entry / DI / command wiring | 🔴 Oversized (~36 KB) | src/extension.ts |
-| Marketplace publish prep | ❌ Missing | (separate stream) |
+| Adapter registry + 5 framework adapters | ✅ Done | src/adapters/ |
+| Coverage parsers (LCOV + coverage.py) | ✅ Done | src/services/coverage.ts |
+| Source-risk scoring | ✅ Done | src/services/sourceRisk.ts |
+| Feature grouping | ✅ Done | src/services/features.ts |
+| Quality heuristics (regex; JS + Flutter Dart) | ✅ Done | src/services/quality.ts (298 lines) |
+| 3 LLM-pattern detectors | ✅ Done | src/services/heuristics/ |
+| Case file synthesis | ✅ Done | src/services/caseFile.ts (327 lines) |
+| MISSING promotion at <5% coverage | ✅ Done | caseFile.ts:139-223 |
+| Markdown export | ✅ Done | src/services/exportMarkdown.ts |
+| ReviewedStore (content-hash invalidation) | ✅ Done | src/services/reviewed.ts |
+| LLM provider abstraction (OpenAI / Claude / Gemini) — now injectable httpRequest for testability | ✅ Done | src/services/llm/ (8 files) |
+| Anti-hallucination prompt + line-anchor verifier + truncation-tolerant JSON fallback | ✅ Done | src/services/llm/enrich.ts (249 lines) |
+| Case File webview (KPI tiles, tabs, filters, scroll+filter state persistence, spinner) | ✅ Done | src/views/caseFile/template.ts (**999 lines — OVERSIZED but functional**) |
+| AI Reviewer sidebar webview view | ✅ Done | src/views/reviewer/ |
+| Install script (clean rebuild, code --install-extension) | ✅ Done | scripts/install.sh (clean `rm -rf out` before tsc) |
 
 ---
 
 ## 🔧 Open issues
 
-### 🔴 Must Fix (blocking the product thesis)
+### 🔴 Must Fix (blocking release)
 
-| # | Issue | Location | Why this blocks the thesis |
-|---|---|---|---|
-| 1 | Investigator outputs a list-dump, not the BookingFlow paragraph | src/services/investigator.ts:22-24, 77-136 | Without synthesis there is no detective |
-| 2 | Missing "mocks the unit under test" detector | src/services/quality.ts:149-153 | Single most diagnostic LLM-fake-test pattern |
-| 3 | Missing "mock-assertions-only" detector | src/services/quality.ts | Distinguishes `expect(spy).toHaveBeenCalled()` from real assertion |
-| 4 | Missing "vague test title" detector | src/services/quality.ts | LLM-generated titles are uniformly vague |
-| 5 | No "DELETE THIS TEST" verdict in any output | investigator.ts + quality.ts | User explicitly wants this — verdicts not facts |
-| 6 | Dashboard has ~28 surfaces; ~60% are noise | src/views/dashboard.ts | Buries the signal |
-| 7 | 4 of 5 sidebar tree views duplicate the dashboard | src/views/{projects,tests,coverage,changedFiles}View.ts | Three places for the same thing |
-| 8 | `src/extension.ts` and `src/views/dashboard.ts` violate the 300-line cap | extension.ts · dashboard.ts | Blocks adding new code under any rule |
-| 9 | No unit tests for the heuristics that ARE the product | quality · sourceRisk · investigator · git · llm | Every product-thesis bet currently untestable |
+_None remaining. The Tier-1 LLM provider test gap was closed in this audit run (12 new tests added)._
 
-### 🟡 Should Fix Soon
+### 🟡 Should Fix Soon (post-release ok)
 
 | # | Issue | Location |
 |---|---|---|
-| 10 | Criticality signals are keyword regex with high false-positive rate | sourceRisk.ts:207-240 |
-| 11 | Coverage weighted heavily despite high coverage ≠ good tests | sourceRisk.ts:266-269 |
-| 12 | Source-to-test mapping basename-only — no TS alias / barrel / Python / Dart resolution | git.ts:75-95 (Phase 3) |
-| 13 | Feature grouping is folder-name guesswork; misses utilities/cross-cutting | features.ts:67-102 |
-| 14 | Coverage bar color logic is inverted-psychology | dashboard.ts:1042-1053 |
-| 15 | `onView:*` activation events wake the extension on sidebar reveal | package.json:14-21 |
-| 16 | `testInspector.llm.baseUrl` accepts any URL — no https validation | services/llm.ts |
-| 17 | Investigation Markdown export is a flat enumeration, not a narrative | investigationReport.ts:4-40 |
+| 1 | `src/views/caseFile/template.ts` at **999 lines** — over 300-line cap. Should split into template-kpis / template-cases / template-filters / template-review. Functional but maintenance debt. | src/views/caseFile/template.ts |
+| 2 | classifySourceFile MISSING/WEAK boundary tests at 4% / 49% / 50% coverage | src/services/caseFile.ts:139-223 |
+| 3 | createProviderRegistry + activeProvider untested | src/services/llm/registry.ts |
+| 4 | Workspace trust not guarded in scanWorkspace | src/extension.ts:177 |
+| 5 | ReviewedStore.load() silently swallows JSON parse errors | src/services/reviewed.ts:29-31 |
+| 6 | `reviewed.load()` fire-and-forget — load failure leaves cards un-hidden silently | src/extension.ts:50 |
+| 7 | ReviewerViewProvider message handlers untested (VS Code WebviewViewProvider mocking is non-trivial) | src/views/reviewer/panel.ts |
 
 ### ⚪ Known limitations (document, don't block)
 
 | # | Limitation |
 |---|---|
-| 18 | Vue.js adapter absent (decisions deferred #2) |
-| 19 | Istanbul JSON / Vitest / Flutter URI path normalization deferred (Phase 5) |
-| 20 | No persistence / trend history (Phase 11) |
-| 21 | No bundler — Marketplace cold-start slow (decisions deferred #1) |
+| 8 | Vue.js adapter absent (decisions deferred #2) |
+| 9 | Istanbul JSON / Vitest / Flutter URI normalization deferred (Phase 5) |
+| 10 | No persistence / trend history beyond reviewed-state (Phase 11) |
+| 11 | No bundler — Marketplace cold-start slow (decisions deferred #1) |
 
 ---
 
 ## 🎯 Close Checklist / Priority Order
 
-  □  1. 🔍  Get audit approval from Danil
-  □  2. 🧠  Propose the detective-mode redesign in chat (UI shape + investigator narrative contract + kill list) — no code
-  □  3. ✅  Get redesign approval — single human gate before any code
-  □  4. 🧪  Add unit tests for the new investigator synthesis (golden master fixtures, BookingFlow-style)
-  □  5. 🐛  Build the missing "delete this test" verdict path (quality + investigator both contribute)
-  □  6. 🪓  Cut 8+ commands and 3+ tree views (per the kill list)
-  □  7. 🪓  Split `extension.ts` and `dashboard.ts` below 300 lines each
-  □  8. 🔧  Add the 3 missing critical heuristics: mocks-the-unit · mock-only-assertions · vague-title
-  □  9. 🪞  Replace dashboard with single narrative panel (1-paragraph verdict + signals on demand)
-  □  10. 🧪  Re-audit; all 🟢 before closure
+  □  1. ✅ Tier-1 LLM provider tests landed — 12 new tests passing (59/59 total)
+  □  2. ✅ Audit anchored in this stream file
+  □  3. ⏳ Danil signs off the audit
+  □  4. ⏳ Danil approves the release commit shape (single bundled commit vs. split per phase)
+  □  5. 📝 Commit covers: v0.0.8 → v0.0.19 source changes + new tests
+  □  6. 🏷️ Tag v0.0.19 in git
+  □  7. 📋 Set `closure_approved: true` in stream frontmatter
+  □  8. 🗄️ `ab close detective-redesign --confirm` archives the stream
+  □  9. 📝 Append a one-liner to `.platform/memory/log.md`
+  □  10. 💡 Distill non-obvious learnings into `.platform/memory/` (gotchas — esp. the `tsc never removes stale .js` gotcha that bit us 4 times tonight)

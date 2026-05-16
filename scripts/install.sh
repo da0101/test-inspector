@@ -43,6 +43,12 @@ fi
 
 # --- compile -----------------------------------------------------------------
 
+step "Cleaning stale build artifacts (out/)"
+# Critical: tsc never removes stale .js files when a .ts file is deleted, so
+# old artifacts from prior layouts can linger and Node will resolve to them
+# before the new folder structure. Always start from a clean out/.
+rm -rf out
+
 step "Compiling TypeScript"
 npm run compile
 

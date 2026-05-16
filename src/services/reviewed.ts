@@ -20,15 +20,26 @@ export class ReviewedStore {
   }
 
   async load(): Promise<void> {
+    let text: string;
     try {
-      const text = await fs.readFile(this.storePath, 'utf8');
+      text = await fs.readFile(this.storePath, 'utf8');
+    } catch {
+      // file doesn't exist yet; first run — keep entries empty.
+      this.entries = new Map();
+      return;
+    }
+    try {
       const parsed = JSON.parse(text) as ReviewedEntry[];
       if (Array.isArray(parsed)) {
         this.entries = new Map(parsed.map((entry) => [entry.path, entry]));
+      } else {
+        this.entries = new Map();
       }
-    } catch {
-      // file doesn't exist yet; that's fine on first run
+    } catch (err) {
+      // Re-throw on JSON corruption so the caller (extension activate) can log
+      // it. The previous silent-swallow made a corrupt store invisible.
       this.entries = new Map();
+      throw new Error(`reviewed.json is corrupt at ${this.storePath}: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 
