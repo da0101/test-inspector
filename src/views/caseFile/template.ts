@@ -37,12 +37,12 @@ const ICONS: Record<string, string> = {
   WEAK: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`,
   MISSING: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10" stroke-dasharray="3 2"/><path d="M12 8v4"/><circle cx="12" cy="16" r="0.5" fill="currentColor"/></svg>`,
   STRONG: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`,
-  flutter: `<svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" aria-hidden="true"><path d="M14.314 0L2.3 12 6 15.7 21.684.012h-7.357zm.014 11.072L7.857 17.53l6.47 6.47H21.7l-6.46-6.468 6.46-6.46h-7.37z"/></svg>`,
-  'firebase-functions': `<svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" aria-hidden="true"><path d="M3.89 15.673L6.255.461A.542.542 0 0 1 7.27.288l2.543 4.771zm16.794 3.692l-2.25-14a.54.54 0 0 0-.919-.295L3.316 19.365l7.856 4.427a1.62 1.62 0 0 0 1.588 0zM14.3 7.147l-1.82-3.482a.542.542 0 0 0-.96 0L3.53 17.984z"/></svg>`,
-  react: `<svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="2.05"/><path d="M12 5.5c4.42 0 8 1.34 8 3s-3.58 3-8 3-8-1.34-8-3 3.58-3 8-3zm0 6.5c-1.97 3.84-4.4 6-6 5s-.74-3.66 1.07-7.5C9 5.66 11.4 3.5 13 4.5s.97 3.66-1 7.5z" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>`,
-  vue: `<svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" aria-hidden="true"><path d="M0 1.61h6.857L12 9.61l5.143-8h6.857L12 22.39z"/></svg>`,
-  django: `<svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" aria-hidden="true"><path d="M11.146 0h3.924v18.166c-2.013.382-3.491.535-5.096.535-4.791 0-7.288-2.166-7.288-6.32 0-4.002 2.65-6.6 6.753-6.6.637 0 1.121.05 1.707.203zm0 9.143a3.894 3.894 0 00-1.325-.204c-1.988 0-3.134 1.223-3.134 3.365 0 2.09 1.096 3.236 3.109 3.236.433 0 .79-.026 1.35-.102V9.142z"/></svg>`,
-  fastapi: `<svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" aria-hidden="true"><path d="M12 0C5.375 0 0 5.375 0 12s5.375 12 12 12 12-5.375 12-12S18.625 0 12 0zm-.624 21.62v-7.528H7.19L13.203 2.38v7.528h4.029Z"/></svg>`,
+  flutter: `<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M14.314 0L2.3 12 6 15.7 21.684.012h-7.357zm.014 11.072L7.857 17.53l6.47 6.47H21.7l-6.46-6.468 6.46-6.46h-7.37z"/></svg>`,
+  'firebase-functions': `<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M3.89 15.673L6.255.461A.542.542 0 0 1 7.27.288l2.543 4.771zm16.794 3.692l-2.25-14a.54.54 0 0 0-.919-.295L3.316 19.365l7.856 4.427a1.62 1.62 0 0 0 1.588 0zM14.3 7.147l-1.82-3.482a.542.542 0 0 0-.96 0L3.53 17.984z"/></svg>`,
+  react: `<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="2.05"/><path d="M12 5.5c4.42 0 8 1.34 8 3s-3.58 3-8 3-8-1.34-8-3 3.58-3 8-3zm0 6.5c-1.97 3.84-4.4 6-6 5s-.74-3.66 1.07-7.5C9 5.66 11.4 3.5 13 4.5s.97 3.66-1 7.5z" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>`,
+  vue: `<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M0 1.61h6.857L12 9.61l5.143-8h6.857L12 22.39z"/></svg>`,
+  django: `<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M11.146 0h3.924v18.166c-2.013.382-3.491.535-5.096.535-4.791 0-7.288-2.166-7.288-6.32 0-4.002 2.65-6.6 6.753-6.6.637 0 1.121.05 1.707.203zm0 9.143a3.894 3.894 0 00-1.325-.204c-1.988 0-3.134 1.223-3.134 3.365 0 2.09 1.096 3.236 3.109 3.236.433 0 .79-.026 1.35-.102V9.142z"/></svg>`,
+  fastapi: `<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M12 0C5.375 0 0 5.375 0 12s5.375 12 12 12 12-5.375 12-12S18.625 0 12 0zm-.624 21.62v-7.528H7.19L13.203 2.38v7.528h4.029Z"/></svg>`,
 };
 
 function projectsById(projects: TestProject[] | undefined): Map<string, TestProject> {
@@ -77,24 +77,28 @@ function frameworkLabel(framework: string | undefined): string {
 function renderKpiTile(verdict: CaseVerdict, count: number, total: number): string {
   const share = total > 0 ? Math.round((count / total) * 100) : 0;
   return `
-    <button class="kpi" data-verdict="${escapeHtml(verdict)}" aria-label="Filter to ${VERDICT_LABEL[verdict]} (${count} of ${total} cases)">
+    <button class="kpi" data-verdict="${escapeHtml(verdict)}" data-blurb="${escapeHtml(VERDICT_BLURB[verdict])}" aria-label="Filter to ${VERDICT_LABEL[verdict]}">
       <span class="kpi-icon kpi-icon--${verdict.toLowerCase()}">${ICONS[verdict]}</span>
       <span class="kpi-body">
-        <span class="kpi-value">${count}</span>
+        <span class="kpi-value" data-count>${count}</span>
         <span class="kpi-label">${VERDICT_LABEL[verdict]}</span>
-        <span class="kpi-blurb">${VERDICT_BLURB[verdict]}${total > 0 ? ` · ${share}%` : ''}</span>
+        <span class="kpi-blurb">
+          <span class="kpi-blurb-text">${VERDICT_BLURB[verdict]}</span>
+          <span class="kpi-blurb-sep" data-sep>${total > 0 ? '·' : ''}</span>
+          <span class="kpi-blurb-pct" data-pct>${total > 0 ? share + '%' : ''}</span>
+        </span>
       </span>
     </button>
   `;
 }
 
-function renderProjectPill(project: TestProject, count: number): string {
-  const icon = frameworkIcon(project.framework);
+function renderTab(opts: { projectId: string; label: string; count: number; framework?: string; active: boolean }): string {
+  const icon = opts.framework ? frameworkIcon(opts.framework) : '';
   return `
-    <button class="pill project" data-project="${escapeHtml(project.id)}">
-      ${icon ? `<span class="pill-icon">${icon}</span>` : ''}
-      <span>${escapeHtml(project.label || project.id)}</span>
-      <em>${count}</em>
+    <button class="tab${opts.active ? ' active' : ''}" data-project="${escapeHtml(opts.projectId)}" role="tab" aria-selected="${opts.active}">
+      ${icon ? `<span class="tab-icon">${icon}</span>` : ''}
+      <span>${escapeHtml(opts.label)}</span>
+      <em>${opts.count}</em>
     </button>
   `;
 }
@@ -135,6 +139,51 @@ const SCRIPT = `
   let projectFilter = '*';
 
   function applyFilter() {
+    // 1. Recompute KPI counts based on current project scope
+    const inScope = [];
+    document.querySelectorAll('.case').forEach((el) => {
+      const p = el.getAttribute('data-project');
+      if (projectFilter === '*' || p === projectFilter) {
+        inScope.push(el);
+      }
+    });
+    const total = inScope.length;
+    const counts = { THEATER: 0, WEAK: 0, MISSING: 0, STRONG: 0 };
+    for (const el of inScope) {
+      const v = el.getAttribute('data-verdict');
+      if (counts[v] !== undefined) counts[v]++;
+    }
+
+    // 2. Update KPI tiles (numbers + share + disabled state + active state)
+    document.querySelectorAll('.kpi').forEach((tile) => {
+      const v = tile.getAttribute('data-verdict');
+      const count = counts[v] ?? 0;
+      const share = total > 0 ? Math.round((count / total) * 100) : 0;
+      const valEl = tile.querySelector('[data-count]');
+      if (valEl) valEl.textContent = String(count);
+      const pctEl = tile.querySelector('[data-pct]');
+      const sepEl = tile.querySelector('[data-sep]');
+      if (pctEl && sepEl) {
+        if (total > 0) {
+          sepEl.textContent = '·';
+          pctEl.textContent = share + '%';
+        } else {
+          sepEl.textContent = '';
+          pctEl.textContent = '';
+        }
+      }
+      tile.classList.toggle('disabled', count === 0);
+      tile.classList.toggle('active', v === verdictFilter && count > 0);
+    });
+
+    // 3. Update tab active state
+    document.querySelectorAll('.tab').forEach((t) => {
+      const isActive = t.getAttribute('data-project') === projectFilter;
+      t.classList.toggle('active', isActive);
+      t.setAttribute('aria-selected', String(isActive));
+    });
+
+    // 4. Apply combined filter to cards
     let shown = 0;
     document.querySelectorAll('.case').forEach((el) => {
       const v = el.getAttribute('data-verdict');
@@ -143,33 +192,36 @@ const SCRIPT = `
       el.style.display = match ? '' : 'none';
       if (match) shown++;
     });
+
+    // 5. Update counter
     const counter = document.getElementById('counter');
     if (counter) {
-      const total = document.querySelectorAll('.case').length;
-      counter.textContent = shown === total ? total + ' cases' : 'showing ' + shown + ' of ' + total;
+      counter.textContent = shown === total ? total + ' case' + (total === 1 ? '' : 's') : 'showing ' + shown + ' of ' + total;
     }
-    document.querySelectorAll('.kpi').forEach((tile) => {
-      tile.classList.toggle('active', tile.getAttribute('data-verdict') === verdictFilter);
-    });
-    document.querySelectorAll('.pill.project').forEach((p) => {
-      p.classList.toggle('active', p.getAttribute('data-project') === projectFilter);
-    });
   }
 
+  // KPI tile click = toggle verdict filter
   document.querySelectorAll('.kpi').forEach((tile) => {
     tile.addEventListener('click', () => {
+      if (tile.classList.contains('disabled')) return;
       const v = tile.getAttribute('data-verdict');
       verdictFilter = (verdictFilter === v) ? '*' : v;
       applyFilter();
     });
   });
-  document.querySelectorAll('.pill.project').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const p = btn.getAttribute('data-project');
-      projectFilter = (projectFilter === p) ? '*' : p;
+
+  // Tab click = switch project scope (exclusive, like radio)
+  document.querySelectorAll('.tab').forEach((tab) => {
+    tab.addEventListener('click', () => {
+      projectFilter = tab.getAttribute('data-project');
+      verdictFilter = '*';
+      // Smooth scroll back to top so the new scope reads from card 1
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       applyFilter();
     });
   });
+
+  // Clear filters link
   document.getElementById('clear-filters')?.addEventListener('click', () => {
     verdictFilter = '*';
     projectFilter = '*';
@@ -186,6 +238,9 @@ const SCRIPT = `
       });
     });
   });
+
+  // Initial state
+  applyFilter();
 `;
 
 const STYLE = `
@@ -211,8 +266,8 @@ const STYLE = `
     --radius-lg: 8px;
     --radius-pill: 999px;
 
-    --transition-fast: 150ms cubic-bezier(0.2, 0.0, 0.0, 1.0);
-    --transition: 200ms cubic-bezier(0.2, 0.0, 0.0, 1.0);
+    --transition-fast: 120ms cubic-bezier(0.2, 0.0, 0.0, 1.0);
+    --transition: 180ms cubic-bezier(0.2, 0.0, 0.0, 1.0);
 
     --elev-1: 0 1px 2px rgba(0, 0, 0, 0.08);
     --elev-2: 0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08);
@@ -236,9 +291,11 @@ const STYLE = `
     --border: var(--vscode-panel-border);
     --muted: var(--vscode-descriptionForeground);
     --fg: var(--vscode-foreground);
+    --accent: var(--vscode-focusBorder, var(--vscode-button-background));
   }
 
   * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
 
   body {
     font-family: var(--vscode-font-family);
@@ -252,7 +309,7 @@ const STYLE = `
 
   /* Hero */
   .hero {
-    padding: var(--space-6) var(--space-6) var(--space-4);
+    padding: var(--space-5) var(--space-6) 0;
     background: var(--surface);
     border-bottom: 1px solid var(--border);
     position: sticky;
@@ -289,12 +346,55 @@ const STYLE = `
   }
   .clear-link:hover { opacity: 0.85; }
 
+  /* Project tabs */
+  .tabs {
+    display: flex;
+    gap: 0;
+    margin: 0 0 var(--space-4);
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+  }
+  .tab {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-4);
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--muted);
+    font-family: inherit;
+    font-size: var(--type-md);
+    cursor: pointer;
+    margin-bottom: -1px;
+    transition: color var(--transition-fast), border-color var(--transition-fast);
+    white-space: nowrap;
+  }
+  .tab .tab-icon { display: inline-flex; opacity: 0.85; }
+  .tab em {
+    font-style: normal;
+    opacity: 0.55;
+    font-size: var(--type-xs);
+    font-variant-numeric: tabular-nums;
+  }
+  .tab:hover { color: var(--fg); }
+  .tab.active {
+    color: var(--fg);
+    border-bottom-color: var(--accent);
+    font-weight: 600;
+  }
+  .tab.active em { opacity: 0.8; }
+  .tab:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+  }
+
   /* KPI strip */
   .kpi-strip {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: var(--space-3);
-    margin-bottom: var(--space-4);
+    padding-bottom: var(--space-4);
   }
   @media (max-width: 720px) {
     .kpi-strip { grid-template-columns: repeat(2, 1fr); }
@@ -312,13 +412,17 @@ const STYLE = `
     font-family: inherit;
     text-align: left;
     cursor: pointer;
-    transition: background var(--transition), border-color var(--transition), box-shadow var(--transition);
+    transition: background var(--transition), border-color var(--transition), box-shadow var(--transition), opacity var(--transition);
     box-shadow: var(--elev-1);
   }
-  .kpi:hover { box-shadow: var(--elev-2); }
+  .kpi:hover:not(.disabled) { box-shadow: var(--elev-2); }
   .kpi:focus-visible {
-    outline: 2px solid var(--vscode-focusBorder);
+    outline: 2px solid var(--accent);
     outline-offset: 2px;
+  }
+  .kpi.disabled {
+    opacity: 0.4;
+    cursor: default;
   }
   .kpi.active { box-shadow: var(--elev-2); }
   .kpi[data-verdict="THEATER"].active { border-color: var(--c-theater); background: var(--c-theater-bg); }
@@ -359,54 +463,13 @@ const STYLE = `
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-  }
-
-  /* Project pill row */
-  .project-row {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    flex-wrap: wrap;
-  }
-  .project-row-label {
-    font-size: var(--type-xs);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--muted);
-    margin-right: var(--space-2);
-  }
-  .pill {
     display: inline-flex;
-    align-items: center;
-    gap: var(--space-2);
-    background: transparent;
-    border: 1px solid var(--border);
-    color: var(--fg);
-    font-family: inherit;
-    font-size: var(--type-sm);
-    padding: 3px 10px;
-    border-radius: var(--radius-pill);
-    cursor: pointer;
-    transition: background var(--transition-fast), border-color var(--transition-fast);
+    gap: 4px;
   }
-  .pill .pill-icon { display: inline-flex; opacity: 0.85; }
-  .pill em {
-    font-style: normal;
-    opacity: 0.6;
-    margin-left: var(--space-1);
-    font-size: var(--type-xs);
+  .kpi-blurb-text, .kpi-blurb-sep, .kpi-blurb-pct {
+    display: inline-block;
   }
-  .pill:hover { background: var(--vscode-list-hoverBackground); }
-  .pill:focus-visible {
-    outline: 2px solid var(--vscode-focusBorder);
-    outline-offset: 1px;
-  }
-  .pill.active {
-    background: var(--vscode-button-background);
-    color: var(--vscode-button-foreground);
-    border-color: var(--vscode-button-background);
-  }
-  .pill.active em { opacity: 0.9; }
+  .kpi-blurb-pct { font-variant-numeric: tabular-nums; }
 
   /* Cases */
   main {
@@ -419,10 +482,13 @@ const STYLE = `
     border: 1px solid var(--border);
     border-left: 3px solid var(--border);
     border-radius: var(--radius-lg);
-    padding: var(--space-4) var(--space-5);
-    margin-bottom: var(--space-3);
+    padding: var(--space-3) var(--space-5);
+    margin-bottom: var(--space-2);
     box-shadow: var(--elev-1);
-    transition: box-shadow var(--transition), border-color var(--transition-fast);
+    transition: box-shadow var(--transition-fast), border-color var(--transition-fast);
+    /* Skip rendering offscreen cards — big perf win for 200+ items */
+    content-visibility: auto;
+    contain-intrinsic-size: 0 180px;
   }
   .case:hover { box-shadow: var(--elev-2); }
   .case[data-verdict="THEATER"] { border-left-color: var(--c-theater); }
@@ -434,7 +500,7 @@ const STYLE = `
     display: flex;
     align-items: center;
     gap: var(--space-2);
-    margin-bottom: var(--space-3);
+    margin-bottom: var(--space-2);
     flex-wrap: wrap;
   }
   .badge {
@@ -510,7 +576,7 @@ const STYLE = `
   }
   .btn:hover { background: var(--vscode-list-hoverBackground); }
   .btn:focus-visible {
-    outline: 2px solid var(--vscode-focusBorder);
+    outline: 2px solid var(--accent);
     outline-offset: 1px;
   }
   .btn.primary {
@@ -536,6 +602,7 @@ const STYLE = `
   }
 
   @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
     *, *::before, *::after {
       transition-duration: 0.01ms !important;
       animation-duration: 0.01ms !important;
@@ -561,18 +628,16 @@ export function renderCaseFileHtml(bundle: CaseFileBundle, opts: RenderOptions):
     .join('');
 
   const projectIds = new Set(bundle.cases.map((c) => c.target.projectId));
-  const projectPills = (bundle.projects ?? [])
-    .filter((p) => projectIds.has(p.id))
-    .map((p) => {
-      const count = bundle.cases.filter((c) => c.target.projectId === p.id).length;
-      return renderProjectPill(p, count);
-    })
-    .join('');
-
-  const projectRow = projectPills
-    ? `<div class="project-row">
-        <span class="project-row-label">Project</span>
-        ${projectPills}
+  const projects = (bundle.projects ?? []).filter((p) => projectIds.has(p.id));
+  const tabs = total > 0
+    ? `<div class="tabs" role="tablist">
+        ${renderTab({ projectId: '*', label: 'All', count: total, active: true })}
+        ${projects
+          .map((p) => {
+            const count = bundle.cases.filter((c) => c.target.projectId === p.id).length;
+            return renderTab({ projectId: p.id, label: p.label || p.id, count, framework: p.framework, active: false });
+          })
+          .join('')}
       </div>`
     : '';
 
@@ -594,8 +659,8 @@ export function renderCaseFileHtml(bundle: CaseFileBundle, opts: RenderOptions):
   <header class="hero">
     <h1 class="hero-title">Test Inspector — Case File</h1>
     <p class="hero-subtitle">${subtitle}</p>
+    ${tabs}
     ${total > 0 ? `<div class="kpi-strip">${kpiTiles}</div>` : ''}
-    ${projectRow}
   </header>
   <main>
     ${renderedCases || empty}
