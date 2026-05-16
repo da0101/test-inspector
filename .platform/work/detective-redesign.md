@@ -57,12 +57,14 @@ _Append-only. Format: `YYYY-MM-DD — <decision> — <rationale>`_
 _Overwritten by `ab checkpoint` — the compact payload the next agent reads first. Keep this block under ~10 lines._
 
 - **Last updated:** 2026-05-16 by danilulmashev (auto)
-- **What just happened:** (auto) 75c0456: v0.0.2: bump version + lock in per-fix bump convention
+- **What just happened:** (auto) 7bf181c: v0.0.3: Case File dashboard polish — filter pills, relative paths, accent borders
 - **Current focus:** —
 - **Next action:** (auto-saved from commit — update next action manually)
 - **Blockers:** none
 
 ## Progress log
+
+2026-05-16 14:32 — (auto) 7bf181c: v0.0.3: Case File dashboard polish — filter pills, relative paths, accent borders
 
 2026-05-16 13:49 — (auto) 75c0456: v0.0.2: bump version + lock in per-fix bump convention
 

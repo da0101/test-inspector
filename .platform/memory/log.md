@@ -5,6 +5,7 @@ One line per completed task. Newest at the top. Append-only.
 Format: `YYYY-MM-DD — <task> — <outcome> — <takeaway>`
 
 ---
+- 2026-05-16 — commit `7bf181c`: v0.0.3: Case File dashboard polish — filter pills, relative paths, accent borders — auto-logged
 - 2026-05-16 — commit `75c0456`: v0.0.2: bump version + lock in per-fix bump convention — auto-logged
 - 2026-05-16 — commit `ad48454`: Phase C-1: per-project grouping in the Cases sidebar — auto-logged
 - 2026-05-16 — commit `6d1179c`: Phase C-0: auto-scan on first activation + clearer empty state — auto-logged
