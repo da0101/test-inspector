@@ -42,12 +42,14 @@ export type CaseFile = {
 export type CaseFileBundle = {
   scanTimestamp: number;
   project?: TestProject;
+  projects?: TestProject[];
   cases: CaseFile[];
   totals: Record<CaseVerdict, number>;
 };
 
 export type SynthesizeInput = {
   project?: TestProject;
+  projects?: TestProject[];
   testFiles?: TestFile[];
   qualityFindings?: QualityFinding[];
   coverage?: CoverageSummary;
@@ -86,6 +88,7 @@ export async function synthesizeCaseFile(
 ): Promise<CaseFileBundle> {
   const bundle = emptyBundle();
   bundle.project = input.project;
+  bundle.projects = input.projects;
 
   for (const testFile of input.testFiles ?? []) {
     let content: string | null = null;

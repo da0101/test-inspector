@@ -92,7 +92,11 @@ export function activate(context: vscode.ExtensionContext): void {
       output.appendLine(`[refresh] source-risk analysis failed: ${msg}`);
     }
 
-    const bundle = await synthesizeCaseFile({ testFiles: allTestFiles, sourceRisks });
+    const bundle = await synthesizeCaseFile({
+      testFiles: allTestFiles,
+      sourceRisks,
+      projects: scannedProjects,
+    });
     casesView.update(bundle);
     output.appendLine(
       `[refresh] verdicts: ${bundle.totals.THEATER} theater · ${bundle.totals.WEAK} weak · ${bundle.totals.MISSING} missing · ${bundle.totals.STRONG} strong`,
