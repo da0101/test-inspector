@@ -1,6 +1,6 @@
 import { promises as fs } from 'node:fs';
 import * as path from 'node:path';
-import type { CoverageFile, CoverageSummary, QualityFinding, TestFile, TestProject } from '../models';
+import type { CoverageFile, CoverageSummary, QualityFinding, SourceFileRisk, TestFile, TestProject } from '../models';
 import {
   detectMockOnlyAssertions,
   detectMocksUnitUnderTest,
@@ -51,6 +51,7 @@ export type SynthesizeInput = {
   testFiles?: TestFile[];
   qualityFindings?: QualityFinding[];
   coverage?: CoverageSummary;
+  sourceRisks?: SourceFileRisk[];
 };
 
 export type FileReader = (filePath: string) => Promise<string>;
@@ -98,8 +99,75 @@ export async function synthesizeCaseFile(
     bundle.totals[caseFile.verdict] += 1;
   }
 
+  for (const risk of input.sourceRisks ?? []) {
+    const caseFile = classifySourceFile(risk);
+    if (caseFile === null) continue;
+    bundle.cases.push(caseFile);
+    bundle.totals[caseFile.verdict] += 1;
+  }
+
   bundle.cases.sort((a, b) => b.killPriority - a.killPriority);
   return bundle;
+}
+
+function classifySourceFile(risk: SourceFileRisk): CaseFile | null {
+  const noTests = (risk.relatedTests?.length ?? 0) === 0;
+  const linesPct = risk.coverage?.linesPct;
+  const lowCoverage = linesPct !== undefined && linesPct < 50;
+  const critical = (risk.criticality ?? 0) > 0;
+
+  if (!critical) return null;
+  if (!noTests && !lowCoverage) return null;
+
+  const verdict: CaseVerdict = noTests ? 'MISSING' : 'WEAK';
+  const killPriority = Math.max(risk.score ?? 0, noTests ? 60 : 30);
+  const name = path.basename(risk.path);
+
+  const signalList: CaseSignal[] = [];
+  for (const sig of risk.signals ?? []) {
+    signalList.push({ name: sig, weight: 10, detail: sig });
+  }
+  if (noTests) {
+    signalList.push({ name: 'no-related-tests', weight: 30, detail: 'no test file imports or covers this source' });
+  }
+  if (lowCoverage && linesPct !== undefined) {
+    signalList.push({
+      name: 'low-line-coverage',
+      weight: 20,
+      detail: `${linesPct.toFixed(0)}% line coverage`,
+    });
+  }
+
+  const signalSummary = (risk.signals ?? []).slice(0, 4).join(', ');
+  const headline = noTests
+    ? `${name} — critical code with no tests`
+    : `${name} — critical code with ${linesPct?.toFixed(0)}% coverage`;
+
+  const paragraph = noTests
+    ? `This file looks like critical code (${signalSummary || 'flagged by multiple criticality signals'}) but no test file imports it or covers it. If it breaks, you'll only find out in production. Add a test that exercises the happy path and at least one error path.`
+    : `This file is critical (${signalSummary || 'flagged by multiple criticality signals'}) and only ${linesPct?.toFixed(0)}% of its lines are exercised by the existing tests. The uncovered lines are where bugs hide. Add cases that exercise the error / branch paths the existing tests skip.`;
+
+  const suggestion: CaseFile['suggestion'] = {
+    kind: 'add',
+    text: risk.recommendation
+      ? risk.recommendation
+      : noTests
+        ? `Add a new test file that imports and exercises \`${name}\`. Start with one happy-path case + one error-path case.`
+        : `Extend existing tests for \`${name}\` to cover the uncovered lines (the error / branch paths).`,
+  };
+
+  return {
+    target: { kind: 'source', path: risk.path, projectId: risk.projectId },
+    verdict,
+    killPriority,
+    story: { headline, paragraph },
+    evidence: {
+      signals: signalList,
+      relatedTests: (risk.relatedTests ?? []).map((p) => ({ path: p, weaknesses: [] })),
+      coverage: risk.coverage,
+    },
+    suggestion,
+  };
 }
 
 function classifyTestFile(testFile: TestFile, content: string | null): CaseFile {

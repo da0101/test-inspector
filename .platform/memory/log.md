@@ -5,6 +5,7 @@ One line per completed task. Newest at the top. Append-only.
 Format: `YYYY-MM-DD — <task> — <outcome> — <takeaway>`
 
 ---
+- 2026-05-16 — commit `8f9e12b`: Phase B-1: real verdicts via 3 LLM-pattern detectors + synthesis pipeline — auto-logged
 - 2026-05-16 — commit `7df1328`: Phase A.5: cut legacy UI; slim extension entry — auto-logged
 - 2026-05-16 — commit `5e29340`: Pre-detective-redesign baseline — auto-logged
 

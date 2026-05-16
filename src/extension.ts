@@ -1,11 +1,12 @@
 import * as vscode from 'vscode';
 import { createAdapters } from './adapters';
-import type { TestFile } from './models';
+import type { CoverageSummary, TestFile, TestProject } from './models';
 import {
   emptyBundle,
   synthesizeCaseFile,
   type CaseFileBundle,
 } from './services/caseFile';
+import { analyzeSourceRisks } from './services/sourceRisk';
 import { CaseFilePanel } from './views/caseFile/panel';
 import { CasesTreeProvider } from './views/casesView';
 
@@ -40,6 +41,8 @@ export function activate(context: vscode.ExtensionContext): void {
     );
 
     const allTestFiles: TestFile[] = [];
+    const allCoverage: CoverageSummary[] = [];
+    const scannedProjects: TestProject[] = [];
     for (const project of projects) {
       const adapter = adapters.find((a) => a.id === project.framework);
       if (!adapter) {
@@ -54,8 +57,20 @@ export function activate(context: vscode.ExtensionContext): void {
           qualityFindings: findings.filter((f) => f.filePath === t.path),
         }));
         allTestFiles.push(...withFindings);
+
+        let coverageMsg = 'no coverage';
+        try {
+          const coverage = await adapter.readCoverage(project);
+          if (coverage) {
+            allCoverage.push(coverage);
+            coverageMsg = `${coverage.files.length} file(s) covered`;
+          }
+        } catch (err) {
+          coverageMsg = `coverage read failed: ${err instanceof Error ? err.message : String(err)}`;
+        }
+        scannedProjects.push(project);
         output.appendLine(
-          `[refresh] ${project.label}: ${withFindings.length} test file(s), ${findings.length} static finding(s)`,
+          `[refresh] ${project.label}: ${withFindings.length} test file(s), ${findings.length} static finding(s), ${coverageMsg}`,
         );
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
@@ -63,9 +78,21 @@ export function activate(context: vscode.ExtensionContext): void {
       }
     }
 
-    const bundle = await synthesizeCaseFile({ testFiles: allTestFiles });
+    let sourceRisks: Awaited<ReturnType<typeof analyzeSourceRisks>> = [];
+    try {
+      sourceRisks = await analyzeSourceRisks(scannedProjects, allTestFiles, allCoverage);
+      output.appendLine(
+        `[refresh] source-file risk: ${sourceRisks.length} source file(s) analyzed`,
+      );
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      output.appendLine(`[refresh] source-risk analysis failed: ${msg}`);
+    }
+
+    const bundle = await synthesizeCaseFile({ testFiles: allTestFiles, sourceRisks });
+    casesView.update(bundle);
     output.appendLine(
-      `[refresh] verdicts: ${bundle.totals.THEATER} theater · ${bundle.totals.WEAK} weak · ${bundle.totals.STRONG} strong (across ${allTestFiles.length} test file(s))`,
+      `[refresh] verdicts: ${bundle.totals.THEATER} theater · ${bundle.totals.WEAK} weak · ${bundle.totals.MISSING} missing · ${bundle.totals.STRONG} strong`,
     );
     return bundle;
   }

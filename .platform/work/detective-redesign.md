@@ -56,13 +56,15 @@ _Append-only. Format: `YYYY-MM-DD — <decision> — <rationale>`_
 ## Resume state
 _Overwritten by `ab checkpoint` — the compact payload the next agent reads first. Keep this block under ~10 lines._
 
-- **Last updated:** 2026-05-16 by claude-code
-- **What just happened:** Phase B-1 shipped — Test Inspector now produces real verdicts. Added 3 LLM-pattern detectors (`vague-title`, `mock-only-assertions`, `mocks-unit-under-test`) calibrated against a survey of Ai-Interior-Design's actual tests. Rewrote `synthesizeCaseFile` as async, taking testFiles + reading content + computing weight-based verdict (THEATER ≥60 / WEAK 1–59 / STRONG 0). Added narrative + suggestion generators that produce BookingFlow-style paragraphs and delete/rewrite/review actions. Wired the refresh pipeline in `extension.ts` to scan ALL projects (Flutter + Firebase + React + Python — multi-project monorepos work). 11 new unit tests, 29/29 total green. Each new file under 300 lines.
-- **Current focus:** Pending commit approval for Phase B-1. Once committed, Danil can press F5 in this repo and open Ai-Interior-Design in the EDH — Refresh should produce real verdict cards on his Flutter + TS tests.
-- **Next action:** commit Phase B-1; then Phase B-2 (source-file MISSING verdicts via sourceRisks integration; coverage signal woven into evidence; Cases tree populated with grouped verdicts) — should be a short next push.
-- **Blockers:** commit approval only.
+- **Last updated:** 2026-05-16 by danilulmashev (auto)
+- **What just happened:** (auto) 8f9e12b: Phase B-1: real verdicts via 3 LLM-pattern detectors + synthesis pipeline
+- **Current focus:** —
+- **Next action:** (auto-saved from commit — update next action manually)
+- **Blockers:** none
 
 ## Progress log
+
+2026-05-16 12:17 — (auto) 8f9e12b: Phase B-1: real verdicts via 3 LLM-pattern detectors + synthesis pipeline
 
 2026-05-16 11:55 — (auto) 7df1328: Phase A.5: cut legacy UI; slim extension entry
 

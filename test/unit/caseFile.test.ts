@@ -87,6 +87,45 @@ test('caseFile · classifies a test with rich behavior assertions as STRONG', as
   assert.equal(bundle.cases[0]!.suggestion.kind, 'review');
 });
 
+test('caseFile · classifies a critical source file with no related tests as MISSING with an add suggestion', async () => {
+  const bundle = await synthesizeCaseFile({
+    sourceRisks: [
+      {
+        path: '/repo/src/auth/login.ts',
+        projectId: 'p1',
+        relatedTests: [],
+        findings: [],
+        score: 75,
+        criticality: 35,
+        signals: ['auth', 'API/data flow'],
+        recommendation: 'Add tests covering the auth boundary and error paths.',
+      },
+    ],
+  });
+  assert.equal(bundle.cases.length, 1);
+  assert.equal(bundle.cases[0]!.verdict, 'MISSING');
+  assert.equal(bundle.cases[0]!.suggestion.kind, 'add');
+  assert.match(bundle.cases[0]!.story.paragraph, /no test file imports it/);
+});
+
+test('caseFile · does not emit a source-file card for non-critical files', async () => {
+  const bundle = await synthesizeCaseFile({
+    sourceRisks: [
+      {
+        path: '/repo/src/utils/format.ts',
+        projectId: 'p1',
+        relatedTests: [],
+        findings: [],
+        score: 30,
+        criticality: 0,
+        signals: [],
+        recommendation: '',
+      },
+    ],
+  });
+  assert.equal(bundle.cases.length, 0);
+});
+
 test('caseFile · sorts cases by kill priority (most attention first)', async () => {
   const theater: TestFile = {
     path: '/tmp/proj/src/Theater.test.tsx',

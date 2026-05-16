@@ -11,6 +11,14 @@
     "Testing",
     "Other"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/da0101/test-inspector.git"
+  },
+  "bugs": {
+    "url": "https://github.com/da0101/test-inspector/issues"
+  },
+  "homepage": "https://github.com/da0101/test-inspector#readme",
   "activationEvents": [
     "onCommand:testInspector.openCaseFile",
     "onCommand:testInspector.refresh",
