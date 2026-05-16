@@ -1,0 +1,58 @@
+# {{REPO_DISPLAY_NAME}} Status
+
+Last updated: {{YYYY-MM-DD}}
+
+> {{ONE_LINER_WHAT_THIS_REPO_IS}}
+> Deep reference: [`{{REFERENCE_FILE}}`]({{REFERENCE_FILE}}).
+
+---
+
+## Feature areas
+
+| Area | Status | Last touched | Notes |
+|---|---|---|---|
+| {{FEATURE_AREA_1}} | ✓ Done / 🔵 Exists / ⧗ Pending / ⚠ Flagged / 🔴 Deferred | {{YYYY-MM-DD}} | {{NOTE}} |
+| {{FEATURE_AREA_2}} | | | |
+| {{FEATURE_AREA_3}} | | | |
+
+**Legend:**
+- ✓ Done — shipped, tested, merged
+- 🔵 Exists — in place but may need review
+- ⧗ Pending — planned, not started
+- ⚠ Flagged — known issue that needs attention
+- 🔴 Deferred — decided to punt (reference `decisions.md` entry)
+
+## Immediate priorities
+
+1. **{{TOP_PRIORITY_1}}** — {{WHY}}
+2. **{{TOP_PRIORITY_2}}** — {{WHY}}
+3. **{{TOP_PRIORITY_3}}** — {{WHY}}
+
+## Open decisions
+
+| # | Question | Deadline |
+|---|---|---|
+| 1 | {{OPEN_QUESTION_1}} | {{WHEN_IT_BLOCKS}} |
+
+## Go-live blocklist
+
+Things that must be resolved before this repo can be in a live customer's hands:
+
+- [ ] {{BLOCKER_1}}
+- [ ] {{BLOCKER_2}}
+- [ ] {{BLOCKER_3}}
+
+## Known gotchas (pinned)
+
+Pin the things that will bite every new session if not flagged upfront.
+
+- **{{GOTCHA_1}}** — {{WHY_IT_BITES}}
+- **{{GOTCHA_2}}** — {{WHY_IT_BITES}}
+
+## File size violations
+
+> Global rule: max ~300 lines per file. Track known offenders here so they get split before being added to.
+
+- `{{PATH/TO/FILE.ext}}` — {{LINE_COUNT}} lines — {{PLANNED_SPLIT}}
+
+See [`{{REFERENCE_FILE}}`]({{REFERENCE_FILE}}) for the full architectural reference.

@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+# pre-commit — provider-agnostic stream closure gate (installed by agentboard)
+# Mirrors platform-closure-gate.js but fires at git commit time, so it
+# covers Codex CLI, Gemini CLI, and any editor that writes commits outside
+# Claude Code's PreToolUse hook system.
+#
+# Exit 1 = block commit.  Exit 0 = allow.
+# Fail-open: unexpected errors always allow the commit through.
+# Bypass (emergency only): git commit --no-verify
+
+readonly _AB_ACTIVE=".platform/work/ACTIVE.md"
+_AB_GATE_BLOCKED=0
+_AB_BLOCK_MSG=""
+
+_ab_extract_slugs() {
+  # Pull valid stream slugs from ACTIVE.md table rows.
+  # Row format:  | slug | type | status | agent | date |
+  printf '%s\n' "$1" \
+    | grep -E '^\|[[:space:]]*[a-zA-Z]' \
+    | awk -F'|' '{gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print $2}' \
+    | grep -E '^[a-zA-Z][a-zA-Z0-9_-]*$'
+}
+
+_ab_run_gate() {
+  # Only act when ACTIVE.md is part of the staged changeset
+  git diff --cached --name-only | grep -Fq "$_AB_ACTIVE" || return 0
+
+  # HEAD version (empty on first commit or when the file is new)
+  local head_content=""
+  if git rev-parse --verify HEAD >/dev/null 2>&1; then
+    head_content="$(git show "HEAD:$_AB_ACTIVE")" || head_content=""
+  fi
+
+  # Staged version
+  local staged_content=""
+  staged_content="$(git show ":0:$_AB_ACTIVE")" || staged_content=""
+
+  local head_slugs staged_slugs
+  head_slugs="$(_ab_extract_slugs "$head_content")"
+  staged_slugs="$(_ab_extract_slugs "$staged_content")"
+
+  local slug stream_file
+  while IFS= read -r slug; do
+    [[ -z "$slug" ]] && continue
+
+    # Still present in the staged version — not being removed
+    printf '%s\n' "$staged_slugs" | grep -Fxq "$slug" && continue
+
+    stream_file=".platform/work/${slug}.md"
+
+    # Stream file already archived (absent) — nothing to check
+    [[ -f "$stream_file" ]] || continue
+
+    # Check for closure_approved: true (frontmatter or bold inline form)
+    if ! grep -Eqm1 '^closure_approved:[[:space:]]*true' "$stream_file" &&
+       ! grep -Eqm1 '\*\*closure_approved:\*\*[[:space:]]*true' "$stream_file"; then
+      _AB_GATE_BLOCKED=1
+      _AB_BLOCK_MSG="${_AB_BLOCK_MSG}
+⛔  STREAM CLOSURE BLOCKED — \"${slug}\"
+    closure_approved is not set to true in .platform/work/${slug}.md
+
+    To close this stream:
+      1. Present completion evidence to the user
+      2. Get explicit human sign-off
+      3. Set  closure_approved: true  in work/${slug}.md
+      4. Re-commit
+"
+    fi
+  done <<< "$head_slugs"
+}
+
+# Run gate — 2>/dev/null suppresses unexpected noise (fail-open semantics).
+# Block messages are collected in _AB_BLOCK_MSG and printed below.
+_ab_run_gate 2>/dev/null
+
+if [[ "$_AB_GATE_BLOCKED" -eq 1 ]]; then
+  printf '\n%s' "$_AB_BLOCK_MSG" >&2
+  printf '\nRule: only the human/owner declares a stream complete.\n' >&2
+  printf '(Bypass — emergency only: git commit --no-verify)\n\n' >&2
+  exit 1
+fi
+
+exit 0

@@ -1,0 +1,27 @@
+node_modules/
+src/
+test/
+test-inspector-extension-prompt.md
+tsconfig.json
+*.map
+
+# Agent scaffolding — repo-only, never ships in the VSIX
+.platform/
+.claude/
+.agents/
+.codex/
+.vscode/
+.git/
+.gitignore
+.vscodeignore
+AGENTS.md
+CLAUDE.md
+GEMINI.md
+
+# Build artifacts that should not ship
+*.vsix
+coverage/
+.test-inspector/
+out/test/
+out/src/**/*.map
+out/test/**/*.map

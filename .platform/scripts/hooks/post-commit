@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# post-commit — ab activity log (installed by ab)
+# Appends one line to .platform/memory/log.md after every commit.
+# Gives Codex/Gemini sessions a breadcrumb trail without manual checkpoints.
+#
+# Fail-open: always exits 0. Never blocks a commit.
+
+LOG=".platform/memory/log.md"
+
+[[ -f "$LOG" ]] || exit 0
+
+hash="$(git rev-parse --short HEAD 2>/dev/null)" || exit 0
+msg="$(git log -1 --format='%s' 2>/dev/null)" || exit 0
+ts="$(date '+%Y-%m-%d')"
+
+# Prepend after the first --- separator so newest entries stay at the top,
+# matching the "Newest at the top" instruction in log.md's own header.
+entry="- $ts — commit \`$hash\`: $msg — auto-logged"
+tmp="$(mktemp 2>/dev/null)" || exit 0
+awk -v e="$entry" '
+  /^---$/ && !done { print; print e; done=1; next }
+  { print }
+  END { if (!done) { print ""; print e } }
+' "$LOG" > "$tmp" 2>/dev/null && mv "$tmp" "$LOG" 2>/dev/null || { rm -f "$tmp" 2>/dev/null; true; }
+
+# Auto-checkpoint the active stream. Runs for every provider (Claude, Codex,
+# Gemini, human) since git hooks are provider-agnostic. Fail-open: if
+# ab isn't on PATH or the call errors, the commit still succeeds.
+if command -v ab >/dev/null 2>&1; then
+  ab checkpoint --auto >/dev/null 2>&1 || true
+fi
+
+exit 0

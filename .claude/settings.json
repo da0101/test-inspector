@@ -1,0 +1,83 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'ROOT=$(git rev-parse --show-toplevel 2>/dev/null); [ -n \"$ROOT\" ] && [ -f \"$ROOT/.platform/scripts/hooks/platform-closure-gate.js\" ] && { cd \"$ROOT\" && node \".platform/scripts/hooks/platform-closure-gate.js\"; } || exit 0'",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'ROOT=$(git rev-parse --show-toplevel 2>/dev/null); [ -n \"$ROOT\" ] && [ -f \"$ROOT/.platform/scripts/hooks/bash-guard.sh\" ] && { cd \"$ROOT\" && bash \".platform/scripts/hooks/bash-guard.sh\"; } || exit 0'",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'ROOT=$(git rev-parse --show-toplevel 2>/dev/null); [ -n \"$ROOT\" ] && [ -f \"$ROOT/.platform/scripts/hooks/pre-tool-use-lock.sh\" ] && { cd \"$ROOT\" && bash \".platform/scripts/hooks/pre-tool-use-lock.sh\"; } || exit 0'",
+            "timeout": 35
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'ROOT=$(git rev-parse --show-toplevel 2>/dev/null); [ -n \"$ROOT\" ] && [ -f \"$ROOT/.platform/scripts/hooks/event-logger.sh\" ] && { cd \"$ROOT\" && bash \".platform/scripts/hooks/event-logger.sh\"; } || exit 0'",
+            "timeout": 3
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'ROOT=$(git rev-parse --show-toplevel 2>/dev/null); [ -n \"$ROOT\" ] && [ -f \"$ROOT/.platform/scripts/hooks/post-tool-use-unlock.sh\" ] && { cd \"$ROOT\" && bash \".platform/scripts/hooks/post-tool-use-unlock.sh\"; } || exit 0'",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "bash -c 'ROOT=$(git rev-parse --show-toplevel 2>/dev/null); [ -n \"$ROOT\" ] && [ -f \"$ROOT/.platform/scripts/hooks/reason-reminder.sh\" ] && { cd \"$ROOT\" && bash \".platform/scripts/hooks/reason-reminder.sh\"; } || exit 0'",
+            "timeout": 3
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'ROOT=$(git rev-parse --show-toplevel 2>/dev/null); [ -n \"$ROOT\" ] && [ -f \"$ROOT/.platform/scripts/hooks/event-logger.sh\" ] && { cd \"$ROOT\" && AGENTBOARD_PROVIDER=claude bash \".platform/scripts/hooks/event-logger.sh\"; } || exit 0'",
+            "timeout": 3
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'ROOT=$(git rev-parse --show-toplevel 2>/dev/null); [ -n \"$ROOT\" ] && [ -f \"$ROOT/.platform/scripts/hooks/platform-bootstrap.sh\" ] && { cd \"$ROOT\" && bash \".platform/scripts/hooks/platform-bootstrap.sh\"; } || exit 0'"
+          }
+        ]
+      }
+    ]
+  }
+}

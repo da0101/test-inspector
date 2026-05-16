@@ -1,0 +1,12 @@
+{
+  "scripts": {
+    "test": "jest"
+  },
+  "dependencies": {
+    "firebase-functions": "latest",
+    "firebase-admin": "latest"
+  },
+  "devDependencies": {
+    "jest": "latest"
+  }
+}
