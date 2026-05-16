@@ -5,6 +5,7 @@ One line per completed task. Newest at the top. Append-only.
 Format: `YYYY-MM-DD — <task> — <outcome> — <takeaway>`
 
 ---
+- 2026-05-16 — commit `ad48454`: Phase C-1: per-project grouping in the Cases sidebar — auto-logged
 - 2026-05-16 — commit `6d1179c`: Phase C-0: auto-scan on first activation + clearer empty state — auto-logged
 - 2026-05-16 — commit `7c55a7f`: Phase B-2: source-file MISSING verdicts + populated Cases tree + install script — auto-logged
 - 2026-05-16 — commit `8f9e12b`: Phase B-1: real verdicts via 3 LLM-pattern detectors + synthesis pipeline — auto-logged
