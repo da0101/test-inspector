@@ -54,14 +54,19 @@ _Append-only. Format: `YYYY-MM-DD — <decision> — <rationale>`_
 | test-inspector | _TODO — set during stage 1c, before implementation_ | `feature/detective-redesign` | _TODO — `develop` doesn't exist yet; confirm with user whether to branch from `main` or create `develop` first_ | _TODO — `npm ci` after worktree create_ | `npm run watch` (extension dev) · F5 (Extension Development Host) | n/a (VS Code extension; no http server) |
 
 ## Resume state
+_Overwritten by `ab checkpoint` — the compact payload the next agent reads first. Keep this block under ~10 lines._
 
 - **Last updated:** 2026-05-16 by claude-code
-- **What just happened:** Phase A scaffold landed on `feature/detective-redesign` (off `develop` off `main`). Added `src/services/caseFile.ts` (types + stub `synthesizeCaseFile`), `src/views/caseFile/template.ts` (HTML renderer with strict CSP), `src/views/caseFile/panel.ts` (webview wrapper), `test/unit/caseFile.test.ts` (4 tests, all pass). Locked decisions D#12 (info-layer only — never mutate) and D#13 (LLM as ambient co-worker, not per-card enrichment). `npm run compile` and `npm test` both pass with 18/18.
-- **Current focus:** awaiting user (Danil) to commit a baseline of the current state — `src/` is untracked, so the Phase A.5 deletions (drop 5 sidebars, dashboard.ts, 19 commands, etc.) cannot start without a recoverable baseline. The agent will not commit autonomously (user's global rule).
-- **Next action:** once Danil commits the baseline, run Phase A.5 — package.json trim, view deletes, extension.ts split into `commands/index.ts` + `wiring.ts`. Then Phase B — real synthesis in `caseFile.ts` + the 3 new heuristic detectors (mocks-the-unit, mock-only-assertions, vague-title) with golden-master fixtures.
-- **Blockers:** baseline commit required before any deletes; branch base is `feature/detective-redesign` off `develop` off `main`.
+- **What just happened:** Phase A.5 cuts landed locally on `feature/detective-redesign`. Deleted 9 legacy view files (dashboard, projects/tests/coverage/quality/changedFiles tree views, investigationView, featureInvestigationView, items helpers) + 3 investigator services (investigator, investigationReport, featureInvestigator). Rewrote `extension.ts` from ~900 lines to 50 lines — registers 5 commands and one Cases tree view. Trimmed `package.json` contributes: 24 commands → 5, 5 tree views → 1, 5 `onView:*` activation events → 0 (now 5 `onCommand:` events). Added `src/views/casesView.ts` as an empty tree provider so the `viewsWelcome` "Open Case File / Refresh" prompts surface. `npm test` 18/18 green, compile clean.
+- **Current focus:** awaiting Danil's approval to commit Phase A.5. Baseline is `5e29340`; A.5 has not yet been committed (per user's global "no commit without explicit ask" rule).
+- **Next action:** on approval, commit Phase A.5; then Phase B — wire the full refresh pipeline (detection → discovery → coverage → quality → risk → features → changed-files) into `synthesizeCaseFile`, implement the 3 missing detectors (mocks-the-unit, mock-only-assertions, vague-title), ship the BookingFlow-style narrative on fixtures.
+- **Blockers:** commit approval only.
 
 ## Progress log
+
+- 2026-05-16 — Phase A.5 cuts: deleted 9 legacy views + 3 investigator services; rewrote extension.ts (~900 → 50 lines) and package.json contributes (24 commands → 5, 5 tree views → 1); added empty Cases tree provider so viewsWelcome surfaces. Tests 18/18, compile clean. Pending commit approval.
+
+2026-05-16 11:38 — (auto) 5e29340: Pre-detective-redesign baseline
 
 - 2026-05-16 — Phase A scaffold landed: caseFile types + stub synthesis + stub Webview panel + 4 passing unit tests. Compile + tests green at 18/18.
 - 2026-05-16 — Decisions D#12 (info-layer only) and D#13 (LLM as ambient co-worker) locked in `.platform/memory/decisions.md`.
@@ -71,9 +76,7 @@ _Append-only. Format: `YYYY-MM-DD — <decision> — <rationale>`_
 
 ## Open questions
 
-- 1. Branch base — `main` (only branch present) or create `develop` first? The platform's worktree convention says feature branches come from `develop`. Awaiting Danil's call.
-- 2. Hard cut vs. progressive cut — should we delete the old dashboard wholesale and ship a v2, or progressively trim while keeping a `legacy mode` for users who liked the cards? Recommend hard cut (pre-1.0, no shipped users yet) but Danil decides.
-- 3. Does "explain like to a 5-year-old" mean two outputs (technical + plain-English) or one plain-English-first output that experts can drill into? Recommend the latter (one narrative, signals exposed on click) but Danil decides.
+_None at the moment. Three resolved 2026-05-16: branch base → `develop` from `main`, then `feature/detective-redesign` from `develop`; cut depth → hard cut (Phase A.5 executed); "explain like 5yo" → one narrative with signals exposed via "Show evidence" button (D#13 / case-file template)._
 
 ---
 
