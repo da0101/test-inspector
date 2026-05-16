@@ -10,7 +10,7 @@ base_branch: develop
 git_branch: feature/detective-redesign
 created_at: 2026-05-16
 updated_at: 2026-05-16
-closure_approved: false
+closure_approved: true
 ---
 
 # detective-redesign
@@ -56,13 +56,15 @@ _Append-only. Format: `YYYY-MM-DD — <decision> — <rationale>`_
 ## Resume state
 _Overwritten by `ab checkpoint` — the compact payload the next agent reads first. Keep this block under ~10 lines._
 
-- **Last updated:** 2026-05-16 by claude-code
-- **What just happened:** Shipped v0.0.8 → v0.0.19 (uncommitted): Phase D LLM provider abstraction (OpenAI / Claude / Gemini) with anti-hallucination prompt + line-anchor verification + truncation-tolerant JSON; sidebar AI Reviewer webview replacing QuickPick; scroll + filter state persistence; per-card spinner UI; install.sh hardened with `rm -rf out` to kill stale-cache bugs. End-to-end verified by Danil on Ai-Interior-Design (Theater + Weak cards reviewed by Gemini with real line-anchored citations).
-- **Current focus:** Pre-release audit — 47/47 tests green. Dispatching 2 parallel agents (implementation + security + code quality; test-coverage gaps). After agents return, fill the top test gaps then await Danil's explicit go on the release commit.
-- **Next action:** Wait for audit agents, paste standardized scorecard into `## 🔍 Audit Report` below, add the highest-priority tests the audit surfaces, then propose the release commit (single big commit covering v0.0.8 → v0.0.19, or split per phase — Danil decides).
-- **Blockers:** none.
+- **Last updated:** 2026-05-16 by danilulmashev (auto)
+- **What just happened:** (auto) 6c50138: v1.0.0 — official release: deterministic detective + LLM-grounded second opinion
+- **Current focus:** —
+- **Next action:** (auto-saved from commit — update next action manually)
+- **Blockers:** none
 
 ## Progress log
+
+2026-05-16 19:27 — (auto) 6c50138: v1.0.0 — official release: deterministic detective + LLM-grounded second opinion
 
 2026-05-16 18:45 — v0.0.19 (uncommitted): Sidebar AI Reviewer webview replaces QuickPick — provider/model/key form inline in activity-bar container. Key field never sent back to webview; multiple provider keys storable simultaneously; per-provider Test button shows ok/error inline. New: `src/views/reviewer/{template,panel}.ts`. Tests 47/47.
 
@@ -81,26 +83,6 @@ _Overwritten by `ab checkpoint` — the compact payload the next agent reads fir
 2026-05-16 17:27 — v0.0.12 (uncommitted): defensive try/catch around `createProviderRegistry` call in activate(); diagnostic logs at every activation step. Tests 47/47.
 
 2026-05-16 17:25 — v0.0.8 → v0.0.11 (uncommitted): Phase D-1 LLM provider abstraction. New `src/services/llm/` folder with `types.ts`, `http.ts`, `openai.ts`, `claude.ts`, `gemini.ts`, `registry.ts`, `enrich.ts`, `index.ts`. Strict-JSON anti-hallucination prompt; line-anchor verification drops fabricated citations; per-card "Ask AI reviewer" button surfaces verified explanation + suggested fix. Per-provider key storage in VS Code SecretStorage. 7 new tests in `llm-enrich.test.ts`. Tests 47/47.
-
-2026-05-16 16:38 — (auto) 08b61d0: v0.0.7: calibration — Flutter detection unblocked + criticality cleanup
-
-2026-05-16 16:04 — (auto) 35bca48: v0.0.6: daily-driver loop closed — Show Evidence, Mark Reviewed, Rescan, Markdown export
-
-2026-05-16 15:29 — (auto) 2d38729: v0.0.5: project tabs + reactive KPI totals + scroll perf
-
-2026-05-16 14:52 — (auto) 92f98bf: v0.0.4: dashboard redesign driven by ui-ux-pro-max recommendations
-
-2026-05-16 14:32 — (auto) 7bf181c: v0.0.3: Case File dashboard polish — filter pills, relative paths, accent borders
-
-2026-05-16 13:49 — (auto) 75c0456: v0.0.2: bump version + lock in per-fix bump convention
-
-2026-05-16 13:27 — (auto) ad48454: Phase C-1: per-project grouping in the Cases sidebar
-
-2026-05-16 13:17 — (auto) 6d1179c: Phase C-0: auto-scan on first activation + clearer empty state
-
-2026-05-16 12:22 — (auto) 7c55a7f: Phase B-2: source-file MISSING verdicts + populated Cases tree + install script
-
-2026-05-16 12:17 — (auto) 8f9e12b: Phase B-1: real verdicts via 3 LLM-pattern detectors + synthesis pipeline
 
 ## Open questions
 
