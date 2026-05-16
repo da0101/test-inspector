@@ -7,7 +7,8 @@ type IncomingMessage =
   | { type: 'open'; path?: string }
   | { type: 'copy'; text?: string }
   | { type: 'evidence'; path?: string }
-  | { type: 'review'; path?: string };
+  | { type: 'review'; path?: string }
+  | { type: 'rescan'; path?: string };
 
 export class CaseFilePanel {
   private static current: CaseFilePanel | undefined;
@@ -68,8 +69,16 @@ export class CaseFilePanel {
           void vscode.window.showInformationMessage('Suggestion copied to clipboard.');
         }
         return;
-      case 'evidence':
       case 'review':
+        if (msg.path) {
+          void vscode.commands.executeCommand('_testInspector.markReviewed', msg.path);
+        }
+        return;
+      case 'rescan':
+        void vscode.commands.executeCommand('testInspector.refresh');
+        return;
+      case 'evidence':
+        // Handled client-side in the webview script (toggle visibility).
         return;
     }
   }

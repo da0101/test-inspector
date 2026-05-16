@@ -4,8 +4,12 @@ import type { CoverageSummary, TestFile, TestProject } from './models';
 import {
   emptyBundle,
   synthesizeCaseFile,
+  type CaseFile,
   type CaseFileBundle,
+  type CaseVerdict,
 } from './services/caseFile';
+import { exportCaseFileAsMarkdown } from './services/exportMarkdown';
+import { ReviewedStore } from './services/reviewed';
 import { analyzeSourceRisks } from './services/sourceRisk';
 import { CaseFilePanel } from './views/caseFile/panel';
 import { CasesTreeProvider } from './views/casesView';
@@ -22,6 +26,13 @@ export function activate(context: vscode.ExtensionContext): void {
   const adapters = createAdapters();
   let lastRefreshAt = 0;
   const REFRESH_DEBOUNCE_MS = 5000;
+  let latestBundle: CaseFileBundle = emptyBundle();
+
+  const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+  const reviewed = workspaceRoot ? new ReviewedStore(workspaceRoot) : null;
+  if (reviewed) {
+    void reviewed.load();
+  }
 
   async function refresh(): Promise<CaseFileBundle> {
     lastRefreshAt = Date.now();
@@ -97,7 +108,27 @@ export function activate(context: vscode.ExtensionContext): void {
       sourceRisks,
       projects: scannedProjects,
     });
+
+    if (reviewed) {
+      const visible: CaseFile[] = [];
+      let hidden = 0;
+      for (const c of bundle.cases) {
+        if (await reviewed.shouldHide(c.target.path)) {
+          hidden++;
+          continue;
+        }
+        visible.push(c);
+      }
+      bundle.cases = visible;
+      bundle.totals = recountTotals(visible);
+      bundle.hiddenReviewedCount = hidden;
+      if (hidden > 0) {
+        output.appendLine(`[refresh] hidden as reviewed: ${hidden} case(s) (edit .test-inspector/reviewed.json to unhide)`);
+      }
+    }
+
     casesView.update(bundle);
+    latestBundle = bundle;
     output.appendLine(
       `[refresh] verdicts: ${bundle.totals.THEATER} theater · ${bundle.totals.WEAK} weak · ${bundle.totals.MISSING} missing · ${bundle.totals.STRONG} strong`,
     );
@@ -145,10 +176,38 @@ export function activate(context: vscode.ExtensionContext): void {
       );
     }),
 
-    vscode.commands.registerCommand('testInspector.exportCaseFile', () => {
+    vscode.commands.registerCommand('testInspector.exportCaseFile', async () => {
+      if (latestBundle.cases.length === 0) {
+        void vscode.window.showInformationMessage(
+          'Test Inspector: nothing to export yet — click Refresh to scan first.',
+        );
+        return;
+      }
+      const defaultName = 'test-inspector-case-file.md';
+      const targetUri = await vscode.window.showSaveDialog({
+        defaultUri: workspaceRoot
+          ? vscode.Uri.file(`${workspaceRoot}/${defaultName}`)
+          : undefined,
+        filters: { Markdown: ['md'] },
+      });
+      if (!targetUri) return;
+      const markdown = exportCaseFileAsMarkdown(latestBundle);
+      await vscode.workspace.fs.writeFile(targetUri, Buffer.from(markdown, 'utf8'));
       void vscode.window.showInformationMessage(
-        'Test Inspector: Markdown export of the Case File lands in Phase C.',
+        `Test Inspector: Case File exported to ${vscode.workspace.asRelativePath(targetUri)}`,
       );
+    }),
+
+    vscode.commands.registerCommand('_testInspector.markReviewed', async (filePath: string) => {
+      if (!reviewed) {
+        void vscode.window.showWarningMessage(
+          'Test Inspector: open a workspace folder to enable Mark Reviewed.',
+        );
+        return;
+      }
+      await reviewed.markReviewed(filePath);
+      output.appendLine(`[review] marked reviewed: ${filePath}`);
+      void vscode.commands.executeCommand('testInspector.refresh');
     }),
   );
 
@@ -170,4 +229,10 @@ export function activate(context: vscode.ExtensionContext): void {
 
 export function deactivate(): void {
   // VS Code disposes everything registered through context.subscriptions.
+}
+
+function recountTotals(cases: CaseFile[]): Record<CaseVerdict, number> {
+  const totals: Record<CaseVerdict, number> = { THEATER: 0, WEAK: 0, MISSING: 0, STRONG: 0, OK: 0 };
+  for (const c of cases) totals[c.verdict] += 1;
+  return totals;
 }

@@ -45,6 +45,8 @@ export type CaseFileBundle = {
   projects?: TestProject[];
   cases: CaseFile[];
   totals: Record<CaseVerdict, number>;
+  /** Cases excluded from `cases` because the user marked them reviewed and the file hasn't changed since. */
+  hiddenReviewedCount?: number;
 };
 
 export type SynthesizeInput = {

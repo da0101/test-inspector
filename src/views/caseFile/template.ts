@@ -103,11 +103,29 @@ function renderTab(opts: { projectId: string; label: string; count: number; fram
   `;
 }
 
+function renderSignal(s: { name: string; weight: number; detail?: string; location?: { file: string; line?: number } }): string {
+  const detail = s.detail ? `<span class="signal-detail">${escapeHtml(s.detail)}</span>` : '';
+  const loc = s.location
+    ? `<span class="signal-loc">${escapeHtml(path.basename(s.location.file))}${s.location.line !== undefined ? ':' + s.location.line : ''}</span>`
+    : '';
+  return `
+    <li class="signal">
+      <span class="signal-row">
+        <code class="signal-name">${escapeHtml(s.name)}</code>
+        <span class="signal-weight">+${s.weight}</span>
+        ${loc}
+      </span>
+      ${detail}
+    </li>
+  `;
+}
+
 function renderCase(c: CaseFile, project: TestProject | undefined): string {
   const rel = relativePath(c.target.path, project);
   const projectLabel = project ? project.label || project.id : c.target.projectId;
   const projectFramework = project?.framework;
   const icon = frameworkIcon(projectFramework);
+  const hasEvidence = c.evidence.signals.length > 0;
   return `
     <article class="case" data-verdict="${escapeHtml(c.verdict)}" data-project="${escapeHtml(c.target.projectId)}">
       <header>
@@ -123,11 +141,20 @@ function renderCase(c: CaseFile, project: TestProject | undefined): string {
       </header>
       <h3>${escapeHtml(c.story.headline)}</h3>
       <p>${escapeHtml(c.story.paragraph)}</p>
+      ${hasEvidence ? `
+        <section class="case-evidence" hidden>
+          <div class="evidence-title">Evidence — ${c.evidence.signals.length} signal${c.evidence.signals.length === 1 ? '' : 's'}</div>
+          <ul class="signal-list">
+            ${c.evidence.signals.map(renderSignal).join('')}
+          </ul>
+        </section>
+      ` : ''}
       <footer>
         <button class="btn primary" data-cmd="open" data-path="${escapeHtml(c.target.path)}">Open file</button>
         <button class="btn" data-cmd="copy" data-text="${escapeHtml(c.suggestion.text)}">Copy suggestion</button>
-        <button class="btn" data-cmd="evidence">Show evidence</button>
-        <button class="btn ghost" data-cmd="review" data-path="${escapeHtml(c.target.path)}" aria-label="Mark this case as reviewed">Mark reviewed</button>
+        ${hasEvidence ? `<button class="btn" data-cmd="evidence">Show evidence</button>` : ''}
+        <button class="btn ghost" data-cmd="rescan" aria-label="Rescan the workspace">Rescan</button>
+        <button class="btn ghost" data-cmd="review" data-path="${escapeHtml(c.target.path)}" aria-label="Mark this case as reviewed and hide it until the file changes">Mark reviewed</button>
       </footer>
     </article>
   `;
@@ -231,8 +258,33 @@ const SCRIPT = `
   document.querySelectorAll('button[data-cmd]').forEach((btn) => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
+      const cmd = btn.dataset.cmd;
+
+      // Evidence toggle is handled client-side — no roundtrip.
+      if (cmd === 'evidence') {
+        const card = btn.closest('.case');
+        const evidence = card && card.querySelector('.case-evidence');
+        if (evidence) {
+          if (evidence.hasAttribute('hidden')) {
+            evidence.removeAttribute('hidden');
+            btn.textContent = 'Hide evidence';
+          } else {
+            evidence.setAttribute('hidden', '');
+            btn.textContent = 'Show evidence';
+          }
+        }
+        return;
+      }
+
+      // Mark Reviewed: hide the card immediately so the user sees instant feedback;
+      // the extension host will write to disk and re-emit the bundle, but UX shouldn't wait.
+      if (cmd === 'review') {
+        const card = btn.closest('.case');
+        if (card) card.style.display = 'none';
+      }
+
       vscode.postMessage({
-        type: btn.dataset.cmd,
+        type: cmd,
         path: btn.dataset.path,
         text: btn.dataset.text,
       });
@@ -594,11 +646,77 @@ const STYLE = `
     color: var(--fg);
   }
 
+  /* Evidence section (revealed by Show evidence button) */
+  .case-evidence {
+    margin: 0 0 var(--space-3);
+    padding: var(--space-3);
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-md);
+    background: var(--surface);
+  }
+  .case-evidence[hidden] { display: none; }
+  .evidence-title {
+    font-size: var(--type-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    margin-bottom: var(--space-2);
+    font-weight: 600;
+  }
+  .signal-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+  .signal {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .signal-row {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+  }
+  .signal-name {
+    font-family: var(--vscode-editor-font-family);
+    font-size: var(--type-sm);
+    font-weight: 600;
+    background: transparent;
+    padding: 0;
+  }
+  .signal-weight {
+    color: var(--muted);
+    font-size: var(--type-xs);
+    font-variant-numeric: tabular-nums;
+  }
+  .signal-loc {
+    font-family: var(--vscode-editor-font-family);
+    font-size: var(--type-xs);
+    color: var(--vscode-textLink-foreground);
+    margin-left: auto;
+  }
+  .signal-detail {
+    color: var(--muted);
+    font-size: var(--type-sm);
+    line-height: 1.5;
+  }
+
   .empty {
     color: var(--muted);
     font-style: italic;
     padding: var(--space-8) var(--space-4);
     text-align: center;
+  }
+
+  .hidden-note {
+    font-size: var(--type-xs);
+    color: var(--muted);
+    font-style: italic;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -641,10 +759,14 @@ export function renderCaseFileHtml(bundle: CaseFileBundle, opts: RenderOptions):
       </div>`
     : '';
 
+  const hiddenNote = bundle.hiddenReviewedCount && bundle.hiddenReviewedCount > 0
+    ? `<span class="hidden-note">· ${bundle.hiddenReviewedCount} hidden (reviewed)</span>`
+    : '';
   const subtitle = total > 0
     ? `<span id="counter">${total} case${total === 1 ? '' : 's'}</span>
+       ${hiddenNote}
        <button id="clear-filters" class="clear-link" type="button">Clear filters</button>`
-    : `<span id="counter">No cases yet</span>`;
+    : `<span id="counter">No cases yet</span>${hiddenNote}`;
 
   return `<!DOCTYPE html>
 <html lang="en">

@@ -57,12 +57,14 @@ _Append-only. Format: `YYYY-MM-DD — <decision> — <rationale>`_
 _Overwritten by `ab checkpoint` — the compact payload the next agent reads first. Keep this block under ~10 lines._
 
 - **Last updated:** 2026-05-16 by danilulmashev (auto)
-- **What just happened:** (auto) 92f98bf: v0.0.4: dashboard redesign driven by ui-ux-pro-max recommendations
+- **What just happened:** (auto) 2d38729: v0.0.5: project tabs + reactive KPI totals + scroll perf
 - **Current focus:** —
 - **Next action:** (auto-saved from commit — update next action manually)
 - **Blockers:** none
 
 ## Progress log
+
+2026-05-16 15:29 — (auto) 2d38729: v0.0.5: project tabs + reactive KPI totals + scroll perf
 
 2026-05-16 14:52 — (auto) 92f98bf: v0.0.4: dashboard redesign driven by ui-ux-pro-max recommendations
 
