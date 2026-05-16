@@ -1,0 +1,20 @@
+node_modules/
+out/
+.vscode-test/
+test-inspector-report.md
+coverage/
+*.vsix
+
+# agentboard:runtime-begin
+.platform/events.jsonl
+.platform/events-*.jsonl
+.platform/events.jsonl.archive-*
+.platform/.daemon-port
+.platform/.file-change-state.lock
+.platform/.file-change-state.lock.d/
+.platform/.file-change-state.tsv
+.platform/.file-locks.json
+.platform/.session-streams.tsv
+.platform/.watch.pid
+.platform/.watch/
+# agentboard:runtime-end

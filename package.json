@@ -1,0 +1,295 @@
+{
+  "name": "test-inspector",
+  "displayName": "Test Inspector",
+  "description": "Local-first test intelligence for React, Flutter, Django, FastAPI, and Firebase Functions projects.",
+  "version": "0.0.1",
+  "publisher": "local",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Testing",
+    "Other"
+  ],
+  "activationEvents": [
+    "onView:testInspector.projects",
+    "onView:testInspector.tests",
+    "onView:testInspector.coverage",
+    "onView:testInspector.quality",
+    "onView:testInspector.changedFiles",
+    "onCommand:testInspector.refreshProjects",
+    "onCommand:testInspector.discoverTests",
+    "onCommand:testInspector.runAll",
+    "onCommand:testInspector.runCurrentFile",
+    "onCommand:testInspector.runRelated",
+    "onCommand:testInspector.generateCoverage",
+    "onCommand:testInspector.showChangedRisk",
+    "onCommand:testInspector.exportReport",
+    "onCommand:testInspector.openDashboard",
+    "onCommand:testInspector.refreshAll",
+    "onCommand:testInspector.analyzeTopRisk",
+    "onCommand:testInspector.analyzeCurrentFile",
+    "onCommand:testInspector.analyzeFile",
+    "onCommand:testInspector.configureLlm",
+    "onCommand:testInspector.openFile",
+    "onCommand:testInspector.exportInvestigation",
+    "onCommand:testInspector.runFeatureTests",
+    "onCommand:testInspector.analyzeFeature",
+    "onCommand:testInspector.exportFeatureInvestigation",
+    "onCommand:testInspector.selectProject",
+    "onCommand:testInspector.clearProjectFilter",
+    "onCommand:testInspector.selectFeature",
+    "onCommand:testInspector.clearFeatureFilter",
+    "onCommand:testInspector.clearNotices"
+  ],
+  "main": "./out/src/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "testInspector",
+          "title": "Test Inspector",
+          "icon": "media/test-inspector.svg"
+        }
+      ]
+    },
+    "views": {
+      "testInspector": [
+        {
+          "id": "testInspector.projects",
+          "name": "Projects"
+        },
+        {
+          "id": "testInspector.tests",
+          "name": "Tests"
+        },
+        {
+          "id": "testInspector.coverage",
+          "name": "Coverage"
+        },
+        {
+          "id": "testInspector.quality",
+          "name": "Quality"
+        },
+        {
+          "id": "testInspector.changedFiles",
+          "name": "Changed Files"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "testInspector.projects",
+        "contents": "No projects detected.\n[Refresh Projects](command:testInspector.refreshProjects)"
+      },
+      {
+        "view": "testInspector.tests",
+        "contents": "No tests discovered yet.\n[Discover Tests](command:testInspector.discoverTests)"
+      }
+    ],
+    "commands": [
+      {
+        "command": "testInspector.refreshProjects",
+        "title": "Test Inspector: Refresh Projects",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "testInspector.refreshAll",
+        "title": "Test Inspector: Refresh All",
+        "icon": "$(sync)"
+      },
+      {
+        "command": "testInspector.openDashboard",
+        "title": "Test Inspector: Open Dashboard",
+        "icon": "$(dashboard)"
+      },
+      {
+        "command": "testInspector.analyzeTopRisk",
+        "title": "Test Inspector: Analyze Top Risk",
+        "icon": "$(inspect)"
+      },
+      {
+        "command": "testInspector.analyzeCurrentFile",
+        "title": "Test Inspector: Analyze Current File",
+        "icon": "$(inspect)"
+      },
+      {
+        "command": "testInspector.configureLlm",
+        "title": "Test Inspector: Configure LLM",
+        "icon": "$(key)"
+      },
+      {
+        "command": "testInspector.exportInvestigation",
+        "title": "Test Inspector: Export Latest Investigation",
+        "icon": "$(file-text)"
+      },
+      {
+        "command": "testInspector.runFeatureTests",
+        "title": "Test Inspector: Run Feature Tests",
+        "icon": "$(run)"
+      },
+      {
+        "command": "testInspector.analyzeFeature",
+        "title": "Test Inspector: Analyze Feature",
+        "icon": "$(inspect)"
+      },
+      {
+        "command": "testInspector.exportFeatureInvestigation",
+        "title": "Test Inspector: Export Latest Feature Investigation",
+        "icon": "$(file-text)"
+      },
+      {
+        "command": "testInspector.selectProject",
+        "title": "Test Inspector: Select Project Filter",
+        "icon": "$(filter)"
+      },
+      {
+        "command": "testInspector.clearProjectFilter",
+        "title": "Test Inspector: Clear Project Filter",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "testInspector.selectFeature",
+        "title": "Test Inspector: Select Feature Filter",
+        "icon": "$(filter)"
+      },
+      {
+        "command": "testInspector.clearFeatureFilter",
+        "title": "Test Inspector: Clear Feature Filter",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "testInspector.clearNotices",
+        "title": "Test Inspector: Clear Notices",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "testInspector.discoverTests",
+        "title": "Test Inspector: Discover Tests",
+        "icon": "$(search)"
+      },
+      {
+        "command": "testInspector.runAll",
+        "title": "Test Inspector: Run All Tests",
+        "icon": "$(run-all)"
+      },
+      {
+        "command": "testInspector.runCurrentFile",
+        "title": "Test Inspector: Run Tests In Current File",
+        "icon": "$(run)"
+      },
+      {
+        "command": "testInspector.runRelated",
+        "title": "Test Inspector: Run Related Tests For Current File",
+        "icon": "$(references)"
+      },
+      {
+        "command": "testInspector.generateCoverage",
+        "title": "Test Inspector: Generate Coverage Report",
+        "icon": "$(graph)"
+      },
+      {
+        "command": "testInspector.showChangedRisk",
+        "title": "Test Inspector: Show Changed File Test Risk",
+        "icon": "$(git-compare)"
+      },
+      {
+        "command": "testInspector.exportReport",
+        "title": "Test Inspector: Export Test Report",
+        "icon": "$(file-text)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "testInspector.openDashboard",
+          "when": "view =~ /testInspector\\..*/",
+          "group": "navigation@0"
+        },
+        {
+          "command": "testInspector.refreshAll",
+          "when": "view =~ /testInspector\\..*/",
+          "group": "navigation@1"
+        },
+        {
+          "command": "testInspector.analyzeTopRisk",
+          "when": "view =~ /testInspector\\..*/",
+          "group": "navigation@1"
+        },
+        {
+          "command": "testInspector.refreshProjects",
+          "when": "view == testInspector.projects",
+          "group": "navigation@2"
+        },
+        {
+          "command": "testInspector.discoverTests",
+          "when": "view == testInspector.tests",
+          "group": "navigation@2"
+        },
+        {
+          "command": "testInspector.generateCoverage",
+          "when": "view == testInspector.coverage",
+          "group": "navigation@2"
+        },
+        {
+          "command": "testInspector.showChangedRisk",
+          "when": "view == testInspector.changedFiles",
+          "group": "navigation@2"
+        },
+        {
+          "command": "testInspector.exportReport",
+          "when": "view =~ /testInspector\\..*/",
+          "group": "navigation@2"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "testInspector.runAll",
+          "when": "viewItem == testInspector.project",
+          "group": "inline@1"
+        },
+        {
+          "command": "testInspector.runCurrentFile",
+          "when": "viewItem == testInspector.testFile",
+          "group": "inline@1"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Test Inspector",
+      "properties": {
+        "testInspector.slowTestThresholdMs": {
+          "type": "number",
+          "default": 1000,
+          "description": "Duration threshold used to flag slow tests."
+        },
+        "testInspector.maxWorkspaceFiles": {
+          "type": "number",
+          "default": 8000,
+          "description": "Maximum files scanned per workspace folder."
+        },
+        "testInspector.llm.baseUrl": {
+          "type": "string",
+          "default": "https://api.openai.com/v1",
+          "description": "OpenAI-compatible chat completions base URL."
+        },
+        "testInspector.llm.model": {
+          "type": "string",
+          "default": "gpt-4.1-mini",
+          "description": "Model used for optional semantic test investigation."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "test": "npm run compile && node --test out/test/unit/*.test.js",
+    "vscode:prepublish": "npm run compile"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.12",
+    "@types/vscode": "^1.90.0",
+    "typescript": "^5.4.5"
+  }
+}

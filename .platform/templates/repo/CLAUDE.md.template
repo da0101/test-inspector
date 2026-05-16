@@ -1,0 +1,85 @@
+# {{REPO_NAME}} — Claude Code Entry
+
+**Stop.** Before touching code in this repo, read the platform context.
+
+> {{ONE_LINER_WHAT_THIS_IS}}
+>
+> {{IS_IT_A_FULL_APP_OR_JUST_A_WIDGET_NOTE}}
+
+## Platform context lives in the sibling repo
+
+```
+{{PLATFORM_REPO_PATH}}/
+```
+
+### Read in this order
+
+1. `{{PLATFORM_REPO_NAME}}/CLAUDE.md` — the platform overview, all repos, hard constraints
+2. `{{PLATFORM_REPO_NAME}}/.platform/ONBOARDING.md` — 5-minute orientation path
+3. `{{PLATFORM_REPO_NAME}}/.platform/{{STATUS_FILE}}` — what's shipped, what's pending in this repo
+4. `{{PLATFORM_REPO_NAME}}/.platform/{{REFERENCE_FILE}}` — deep reference for this repo (architecture, routes, data flow)
+5. `{{PLATFORM_REPO_NAME}}/.platform/conventions/{{PRIMARY_CONVENTIONS_FILE}}` — the primary convention for this repo's stack
+6. `{{PLATFORM_REPO_NAME}}/.platform/conventions/api.md` — the 3 canonical response shapes
+7. `{{PLATFORM_REPO_NAME}}/.platform/conventions/security.md` — OWASP, secrets, auth, Stripe rules
+8. `{{PLATFORM_REPO_NAME}}/.platform/conventions/testing.md` — testing bar per feature type
+
+### Decisions, workflow, history
+
+- `{{PLATFORM_REPO_NAME}}/.platform/memory/decisions.md` — why things are the way they are (locked + deferred)
+- `{{PLATFORM_REPO_NAME}}/.platform/workflow.md` — the 6-stage inline workflow
+- `{{PLATFORM_REPO_NAME}}/.platform/memory/log.md` — rolling session history
+
+## Canonical facts (trust these over anything else in this repo)
+
+- **Tech stack:** {{TECH_STACK_LINE}}
+- **Build targets:** {{BUILD_TARGETS}}
+- **Data contract:** {{DATA_CONTRACT_ONE_LINER}}
+- **API shape:** {{API_SHAPE_NOTE}} (see `conventions/api.md`)
+- **Auth:** {{AUTH_MODEL}}
+- {{ADDITIONAL_LOCKED_FACTS}}
+
+## Quickstart (unique to this repo)
+
+### Setup
+
+```bash
+{{QUICKSTART_SETUP}}
+```
+
+### Run
+
+```bash
+{{QUICKSTART_RUN}}
+```
+
+### Build
+
+```bash
+{{QUICKSTART_BUILD}}
+```
+
+### Test
+
+```bash
+{{QUICKSTART_TEST}}
+```
+
+## Canonical files for writing code in this repo
+
+| Touching... | Read |
+|---|---|
+{{CANONICAL_FILES_TABLE}}
+
+## Hard rules (non-negotiable)
+
+{{HARD_RULES_LIST}}
+
+## When the platform context and this file disagree
+
+The platform context wins. Update this file to match or route the conflict to the founder.
+
+---
+
+<!--
+PLACEHOLDERS TO FILL: see ADDING-A-REPO.md §Step 2 for the full list.
+-->

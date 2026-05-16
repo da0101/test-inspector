@@ -1,0 +1,108 @@
+#!/usr/bin/env bash
+# gemini-ab — agentboard-aware Gemini CLI wrapper
+# 1. Logs SessionStart + FileChange + SessionEnd events — closes the
+#    observability gap vs Claude Code (which has native PostToolUse hooks).
+#    A 5s background poller inside this wrapper records every tracked file
+#    change as an event, giving the next agent the same visibility it has
+#    into a Claude Code session.
+# 2. Runs `agentboard brief` + `events tail` before launch so Gemini sees
+#    what prior sessions did.
+# 3. Auto-checkpoints the active stream when the session ends without a
+#    manual checkpoint — same safety net as Claude Code's session hooks.
+#
+# Usage:   bash .platform/scripts/gemini-ab [gemini args...]
+# Alias:   alias gemini='bash "$(git rev-parse --show-toplevel)/.platform/scripts/gemini-ab"'
+
+AGENTBOARD_PROVIDER="gemini"
+AGENTBOARD_SESSION_ID="gemini-$$-$(date +%s 2>/dev/null || printf 'unknown')"
+export AGENTBOARD_PROVIDER AGENTBOARD_SESSION_ID
+if [[ -d ".platform" ]] && command -v agentboard >/dev/null 2>&1; then
+  _ab_stream="$(agentboard current-stream --session-id "$AGENTBOARD_SESSION_ID" --remember --quiet 2>/dev/null || true)"
+  if [[ -n "$_ab_stream" ]]; then
+    AGENTBOARD_STREAM="$_ab_stream"
+    export AGENTBOARD_STREAM
+  fi
+fi
+
+# ── Session bootstrap ────────────────────────────────────────────────────────
+_ab_poller_pid=0
+if [[ -d ".platform" ]]; then
+  if [[ -f ".platform/scripts/session-track.sh" ]]; then
+    # shellcheck disable=SC1091
+    . ".platform/scripts/session-track.sh"
+  fi
+  if command -v agentboard >/dev/null 2>&1; then
+    agentboard brief 2>/dev/null || true
+    printf '\n\033[1mLock discipline for parallel edits:\033[0m\n'
+    printf '  • Before editing a file from Gemini, run: \033[36mab lock acquire <file>\033[0m\n'
+    printf '  • After the edit completes, run:         \033[36mab lock release <file>\033[0m\n'
+    printf '  • Inspect current holders with:          \033[36mab lock list\033[0m\n'
+    printf '\n\033[1mRecent tool activity from other providers:\033[0m\n'
+    agentboard events tail -n 20 2>/dev/null || true
+    printf '\n'
+  fi
+fi
+
+# ── Model selection ───────────────────────────────────────────────────────────
+_ab_model="gemini-2.5-flash"
+if [[ -t 0 ]]; then
+  printf '\n\033[1mGemini model\033[0m \033[2m(Enter = flash)\033[0m\n'
+  printf '  1) flash    — fast, cheap, standard tasks  \033[2m[default]\033[0m\n'
+  printf '  2) pro      — complex reasoning, architecture\n'
+  printf 'Choice [1-2]: '
+  read -r _ab_choice 2>/dev/null || _ab_choice=""
+  case "$_ab_choice" in
+    2) _ab_model="gemini-2.5-pro" ;;
+    *) _ab_model="gemini-2.5-flash" ;;
+  esac
+fi
+AGENTBOARD_MODEL="$_ab_model"
+export AGENTBOARD_MODEL
+
+# ── Log SessionStart (after model is known) + start file poller ──────────────
+if [[ -d ".platform" ]] && declare -f _ab_session_event >/dev/null 2>&1; then
+  _ab_session_event "SessionStart" "$AGENTBOARD_SESSION_ID" "\"provider\":\"gemini\",\"model\":\"$_ab_model\""
+  _ab_poller_pid="$(_ab_start_file_poller "$AGENTBOARD_SESSION_ID" "gemini" 5)"
+fi
+
+# ── Run Gemini (not exec — wrapper stays alive for post-session work) ────────
+command gemini --model "$_ab_model" "$@"
+_ab_exit=$?
+
+# ── Stop file poller + log SessionEnd ────────────────────────────────────────
+if [[ "$_ab_poller_pid" -gt 0 ]] 2>/dev/null; then
+  if declare -f _ab_stop_file_poller >/dev/null 2>&1; then
+    _ab_stop_file_poller "$_ab_poller_pid"
+  fi
+fi
+if declare -f _ab_check_unreasoned_changes >/dev/null 2>&1; then
+  _ab_check_unreasoned_changes "$AGENTBOARD_SESSION_ID"
+fi
+if declare -f _ab_stop_daemon >/dev/null 2>&1; then
+  _ab_stop_daemon
+fi
+if declare -f _ab_session_event >/dev/null 2>&1; then
+  _ab_session_event "SessionEnd" "$AGENTBOARD_SESSION_ID" "\"provider\":\"gemini\",\"exit_code\":$_ab_exit"
+fi
+
+# ── Auto-checkpoint on exit ──────────────────────────────────────────────────
+# Fires only when: .platform exists, exactly one active stream, and the stream
+# file has not been touched in the last 10 min (no recent manual checkpoint).
+if [[ -d ".platform" ]] && command -v agentboard >/dev/null 2>&1; then
+  _ab_slug="${AGENTBOARD_STREAM:-$(agentboard current-stream --session-id "$AGENTBOARD_SESSION_ID" --quiet 2>/dev/null || true)}"
+  if [[ -n "$_ab_slug" ]]; then
+    _ab_sf=".platform/work/${_ab_slug}.md"
+    if [[ -f "$_ab_sf" ]] && ! find "$_ab_sf" -mmin -10 -type f 2>/dev/null | grep -q .; then
+      _ab_next="$(agentboard next-action "$_ab_slug" --quiet 2>/dev/null || true)"
+      [[ -z "$_ab_next" ]] && _ab_next="Review recent changes and continue"
+
+      agentboard checkpoint "$_ab_slug" \
+        --what "auto-checkpoint: Gemini session ended without manual checkpoint" \
+        --next "$_ab_next" \
+        --provider gemini 2>/dev/null && \
+        printf '\n(auto-checkpointed stream %s on exit)\n' "$_ab_slug" >&2 || true
+    fi
+  fi
+fi
+
+exit "$_ab_exit"

@@ -1,0 +1,6 @@
+node_modules/
+src/
+test/
+test-inspector-extension-prompt.md
+tsconfig.json
+*.map

@@ -1,0 +1,13 @@
+{
+  "scripts": {
+    "test": "vitest run",
+    "coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "react": "latest"
+  },
+  "devDependencies": {
+    "vitest": "latest",
+    "@testing-library/react": "latest"
+  }
+}

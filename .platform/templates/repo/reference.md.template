@@ -1,0 +1,188 @@
+# {{REPO_DISPLAY_NAME}} — Deep Reference
+
+> **Audience:** an AI agent (or human) about to make a non-trivial change in `{{REPO_NAME}}`. Read this when STATUS alone isn't enough.
+> **Last updated:** {{YYYY-MM-DD}}
+> **Repo:** `/Users/danilulmashev/Documents/GitHub/{{REPO_NAME}}`
+
+---
+
+## 1. What this repo is
+
+{{TWO_OR_THREE_PARAGRAPHS_EXPLAINING_THE_PURPOSE_SCOPE_AND_USERS}}
+
+**Who uses it:** {{END_USERS}}
+**Who deploys it:** {{DEPLOYER}}
+**Hosting target:** {{HOSTING_TARGET}}
+
+## 2. Tech stack
+
+| Layer | Choice | Notes |
+|---|---|---|
+| Framework | {{FRAMEWORK}} | |
+| Build tool | {{BUILD_TOOL}} | |
+| Language | {{LANGUAGE}} | |
+| State management | {{STATE_MGMT}} | |
+| Styling | {{STYLING}} | |
+| Testing | {{TESTING}} | |
+| Key libs | {{KEY_LIBS}} | |
+
+## 3. Architecture diagram
+
+```
+{{ASCII_ARCHITECTURE_DIAGRAM}}
+```
+
+## 4. Directory layout
+
+> Delete rows that don't apply to your stack. Shown below: React repo example. For Django use `{{app_name}}/` folders with `models.py / views/ / serializers/ / services/ / tests/`. For Flutter use `lib/` + `test/`. For CLI use `cmd/` + `internal/`. Keep it truthful.
+
+```
+{{REPO_NAME}}/
+├── {{PRIMARY_SOURCE_DIR}}/        # {{DESCRIPTION — src/, app/, lib/, etc.}}
+│   ├── {{SUBDIR_1}}                # {{DESCRIPTION}}
+│   ├── {{SUBDIR_2}}                # {{DESCRIPTION}}
+│   ├── {{SUBDIR_3}}                # {{DESCRIPTION}}
+│   └── {{SUBDIR_4}}                # {{DESCRIPTION}}
+├── {{STATIC_OR_ASSETS_DIR}}/      # Optional — static assets served as-is
+├── {{BUILD_OUTPUT_DIR}}/          # Optional — build output (gitignored)
+├── {{TEST_DIR}}/                  # Optional if tests are colocated
+└── {{MANIFEST_FILE}}              # package.json / pyproject.toml / pubspec.yaml / Cargo.toml
+```
+
+## 5. Entry points
+
+> Some repos have one entry (backend service, CLI, standalone SPA). Some have two (dual-build React widgets). Fill what applies, delete what doesn't.
+
+### Primary entry
+**File:** `{{ENTRY_PRIMARY}}`
+**What it does:** {{DESCRIPTION}}
+**Build / run command:** `{{BUILD_OR_RUN_CMD}}`
+**Deployed to:** {{PRIMARY_DEPLOY_TARGET}}
+
+### Secondary entry (if applicable)
+**File:** `{{ENTRY_SECONDARY}}`
+**What it does:** {{DESCRIPTION — e.g., exposes `window.{{GLOBAL_NAME}}.render(containerId, config)` for third-party sites}}
+**Build command:** `{{BUILD_SECONDARY_CMD}}`
+**Output formats:** {{OUTPUT_FORMATS — e.g., UMD + ES, or wheel + sdist, or standalone binary}}
+**Deployed to:** {{SECONDARY_DEPLOY_TARGET}}
+**Consumers:** {{WHO_CONSUMES_THIS}}
+
+## 6. State management
+
+{{EXPLAIN_HOW_STATE_WORKS_HERE}}
+
+Key slices / contexts / stores:
+- `{{SLICE_1}}` — {{WHAT_IT_OWNS}}
+- `{{SLICE_2}}` — {{WHAT_IT_OWNS}}
+
+## 7. Data flow
+
+### 7a. API calls (reading from backend)
+
+| Endpoint | Method | Purpose | Shape |
+|---|---|---|---|
+| {{ENDPOINT_PATH}} | GET | {{PURPOSE}} | {{SHAPE_1_ENTITIES_OR_LEGACY}} |
+| ... | | | |
+
+### 7b. Mutations (writing to backend)
+
+| Endpoint | Method | Purpose | Auth |
+|---|---|---|---|
+| {{ENDPOINT_PATH}} | POST | {{PURPOSE}} | {{AUTH_REQUIRED}} |
+
+### 7c. Realtime (if applicable)
+
+{{EXPLAIN_FIREBASE_RTDB_OR_WEBSOCKETS_OR_POLLING_IF_USED}}
+
+### 7d. Caching
+
+{{EXPLAIN_CACHING_STRATEGY}}
+
+## 8. Auth
+
+{{EXPLAIN_AUTH_MODEL_FOR_THIS_REPO}}
+
+Examples:
+- **Public, no auth** — reads only public endpoints, no token
+- **Firebase anonymous** — silent `signInAnonymously()` before checkout
+- **Firebase ID token** — authenticated admin user
+- **Bearer via subdomain context** — restaurant resolved from hostname
+
+## 9. Environment configuration
+
+### Required env vars
+
+| Var | Description | Example |
+|---|---|---|
+| `{{VAR_1}}` | {{DESC}} | {{EXAMPLE}} |
+
+### Optional env vars / URL params
+
+| Name | Source | Description |
+|---|---|---|
+| `{{VAR}}` | env / URL param | {{DESC}} |
+
+### Per-port configurations (if any)
+
+{{EXPLAIN_MULTI_PORT_SETUP_IF_USED}}
+
+## 10. Build & deploy
+
+### Commands
+
+```bash
+{{BUILD_DEV_CMD}}       # dev server
+{{BUILD_PROD_CMD}}      # production build
+{{BUILD_EMBED_CMD}}     # embed/library build (if dual)
+{{LINT_CMD}}            # lint
+{{TEST_CMD}}            # test
+```
+
+### Deploy steps
+
+```bash
+{{DEPLOY_STEPS}}
+```
+
+### Rollback
+
+{{ROLLBACK_INSTRUCTIONS}}
+
+## 11. Known violations / tech debt
+
+| File | Issue | Planned fix |
+|---|---|---|
+| `{{PATH/TO/FILE.ext}}` | {{ISSUE}} | {{PLAN}} |
+
+## 12. Specialist routing
+
+| When you touch... | Use specialist |
+|---|---|
+| {{AREA_1}} | {{SPECIALIST_SKILL_NAME}} |
+| {{AREA_2}} | {{SPECIALIST_SKILL_NAME}} |
+
+## 13. Hard rules carried over from the platform
+
+These apply to every repo; re-stated here so an agent working only in this repo can't miss them:
+
+1. Max ~300 lines per file
+2. API response shape must match `conventions/api.md`
+3. Never log Stripe `client_secret` or payment payloads
+4. Every tenant-scoped query filters by `restaurant_id` from trusted context, not query params
+5. Never commit `.env` or secret files
+
+See `.platform/CLAUDE.md` for the full hard constraints list.
+
+## 14. Cross-repo dependencies
+
+{{EXPLAIN_WHICH_OTHER_REPOS_THIS_DEPENDS_ON_AND_WHICH_DEPEND_ON_IT}}
+
+Example:
+- **Depends on:** `restohub-backend` for the `{{ENDPOINT}}` endpoint (must stay on Shape 1 entities)
+- **Depended on by:** nobody — leaf repo
+
+## 15. Open questions
+
+| # | Question | Who can answer |
+|---|---|---|
+| 1 | {{QUESTION}} | {{WHO}} |
