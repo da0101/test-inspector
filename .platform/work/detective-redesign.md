@@ -57,12 +57,14 @@ _Append-only. Format: `YYYY-MM-DD — <decision> — <rationale>`_
 _Overwritten by `ab checkpoint` — the compact payload the next agent reads first. Keep this block under ~10 lines._
 
 - **Last updated:** 2026-05-16 by danilulmashev (auto)
-- **What just happened:** (auto) 8f9e12b: Phase B-1: real verdicts via 3 LLM-pattern detectors + synthesis pipeline
+- **What just happened:** (auto) 7c55a7f: Phase B-2: source-file MISSING verdicts + populated Cases tree + install script
 - **Current focus:** —
 - **Next action:** (auto-saved from commit — update next action manually)
 - **Blockers:** none
 
 ## Progress log
+
+2026-05-16 12:22 — (auto) 7c55a7f: Phase B-2: source-file MISSING verdicts + populated Cases tree + install script
 
 2026-05-16 12:17 — (auto) 8f9e12b: Phase B-1: real verdicts via 3 LLM-pattern detectors + synthesis pipeline
 

@@ -20,6 +20,7 @@
   },
   "homepage": "https://github.com/da0101/test-inspector#readme",
   "activationEvents": [
+    "onView:testInspector.cases",
     "onCommand:testInspector.openCaseFile",
     "onCommand:testInspector.refresh",
     "onCommand:testInspector.configureLlm",
@@ -48,7 +49,7 @@
     "viewsWelcome": [
       {
         "view": "testInspector.cases",
-        "contents": "Test Inspector is a detective for your tests — it names which tests are theater, which are weak, and what's missing. The tool only informs; you fix and rescan.\n\n[Open Case File](command:testInspector.openCaseFile)\n[Refresh](command:testInspector.refresh)"
+        "contents": "Test Inspector finds tests that are **theater**, **weak**, or **missing** — without running them.\n\nScanning starts automatically when you open this view. If nothing appears below, the workspace doesn't contain a recognized test project (Flutter, React, Vue, Django, FastAPI, Firebase Functions, Node).\n\n[Scan this workspace now](command:testInspector.refresh)\n[Open Case File panel](command:testInspector.openCaseFile)"
       }
     ],
     "commands": [

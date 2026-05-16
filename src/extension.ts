@@ -20,8 +20,11 @@ export function activate(context: vscode.ExtensionContext): void {
 
   const casesView = new CasesTreeProvider();
   const adapters = createAdapters();
+  let lastRefreshAt = 0;
+  const REFRESH_DEBOUNCE_MS = 5000;
 
   async function refresh(): Promise<CaseFileBundle> {
+    lastRefreshAt = Date.now();
     const folders = vscode.workspace.workspaceFolders?.map((f) => f.uri.fsPath) ?? [];
     if (folders.length === 0) {
       output.appendLine('[refresh] no workspace folders open');
@@ -144,6 +147,21 @@ export function activate(context: vscode.ExtensionContext): void {
       );
     }),
   );
+
+  // Auto-scan once on activation if a workspace is open. The 500 ms delay lets
+  // any explicit command (e.g. the user clicking Refresh in the welcome panel)
+  // fire first; if it does, lastRefreshAt is updated and this auto-trigger
+  // short-circuits inside the debounce window so we never double-scan.
+  const folders = vscode.workspace.workspaceFolders ?? [];
+  if (folders.length > 0) {
+    setTimeout(() => {
+      if (Date.now() - lastRefreshAt < REFRESH_DEBOUNCE_MS) {
+        return;
+      }
+      output.appendLine('[activate] auto-scanning on first activation');
+      void vscode.commands.executeCommand('testInspector.refresh');
+    }, 500);
+  }
 }
 
 export function deactivate(): void {
