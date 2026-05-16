@@ -1,7 +1,7 @@
 import * as crypto from 'node:crypto';
 import * as vscode from 'vscode';
 import { renderCaseFileHtml } from './template';
-import { synthesizeCaseFile, type CaseFileBundle } from '../../services/caseFile';
+import { emptyBundle, type CaseFileBundle } from '../../services/caseFile';
 
 type IncomingMessage =
   | { type: 'open'; path?: string }
@@ -40,7 +40,7 @@ export class CaseFilePanel {
       { enableScripts: true, retainContextWhenHidden: true },
     );
     panel.iconPath = vscode.Uri.joinPath(context.extensionUri, 'media', 'test-inspector.svg');
-    CaseFilePanel.current = new CaseFilePanel(panel, synthesizeCaseFile({}));
+    CaseFilePanel.current = new CaseFilePanel(panel, emptyBundle());
     return CaseFilePanel.current;
   }
 
