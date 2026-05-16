@@ -1,0 +1,41 @@
+# Code owners for test-inspector.
+#
+# GitHub honors this file on the BASE branch of a pull request — so this file
+# lives on `main` (and is copied through `develop` via the standard flow) and
+# is what enforces required reviews when branch protection is enabled in
+# repository settings.
+#
+# Format: <pattern> <owner1> <owner2> ...
+# Patterns follow .gitignore-style globbing. The LAST matching line wins per
+# file, so put broad rules first and narrow overrides further down.
+
+# Default owner — applies to every file unless a more specific rule below
+# matches.
+*                                       @da0101
+
+# Adapters and per-framework detection — sensitive to false positives /
+# negatives that the agent has been calibrated against real codebases.
+/src/adapters/                          @da0101
+/src/services/heuristics/               @da0101
+/src/services/quality.ts                @da0101
+
+# LLM integration — strict anti-hallucination contract; key handling must
+# never regress.
+/src/services/llm/                      @da0101
+
+# Webview surfaces — XSS-safe-by-construction requirement; CSP and HTML
+# escaping must remain enforced.
+/src/views/                             @da0101
+
+# Platform / context pack — owner makes the call on stream lifecycle,
+# memory, decisions, and conventions.
+/.platform/                             @da0101
+/CLAUDE.md                              @da0101
+/AGENTS.md                              @da0101
+/GEMINI.md                              @da0101
+
+# Release infrastructure — versioning, packaging, installer.
+/package.json                           @da0101
+/package-lock.json                      @da0101
+/scripts/                               @da0101
+/.github/                               @da0101

@@ -5,6 +5,7 @@ One line per completed task. Newest at the top. Append-only.
 Format: `YYYY-MM-DD — <task> — <outcome> — <takeaway>`
 
 ---
+- 2026-05-16 — commit `1ffaee4`: Close detective-redesign stream — auto-logged
 - 2026-05-16 — commit `6c50138`: v1.0.0 — official release: deterministic detective + LLM-grounded second opinion — auto-logged
 - 2026-05-16 — commit `08b61d0`: v0.0.7: calibration — Flutter detection unblocked + criticality cleanup — auto-logged
 - 2026-05-16 — commit `35bca48`: v0.0.6: daily-driver loop closed — Show Evidence, Mark Reviewed, Rescan, Markdown export — auto-logged
