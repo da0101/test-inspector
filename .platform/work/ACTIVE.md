@@ -5,7 +5,7 @@
 
 | Stream | Type | Status | Agent | Last updated |
 |---|---|---|---|---|
-| [detective-redesign](detective-redesign.md) | feature | planning | claude-code | 2026-05-16 |
+| [detective-redesign](archive/detective-redesign.md) | feature | closed | claude-code | 2026-05-16 |
 
 ---
 
