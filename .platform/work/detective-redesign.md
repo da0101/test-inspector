@@ -57,12 +57,14 @@ _Append-only. Format: `YYYY-MM-DD — <decision> — <rationale>`_
 _Overwritten by `ab checkpoint` — the compact payload the next agent reads first. Keep this block under ~10 lines._
 
 - **Last updated:** 2026-05-16 by danilulmashev (auto)
-- **What just happened:** (auto) ad48454: Phase C-1: per-project grouping in the Cases sidebar
+- **What just happened:** (auto) 75c0456: v0.0.2: bump version + lock in per-fix bump convention
 - **Current focus:** —
 - **Next action:** (auto-saved from commit — update next action manually)
 - **Blockers:** none
 
 ## Progress log
+
+2026-05-16 13:49 — (auto) 75c0456: v0.0.2: bump version + lock in per-fix bump convention
 
 2026-05-16 13:27 — (auto) ad48454: Phase C-1: per-project grouping in the Cases sidebar
 
