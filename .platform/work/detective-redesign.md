@@ -57,12 +57,14 @@ _Append-only. Format: `YYYY-MM-DD — <decision> — <rationale>`_
 _Overwritten by `ab checkpoint` — the compact payload the next agent reads first. Keep this block under ~10 lines._
 
 - **Last updated:** 2026-05-16 by danilulmashev (auto)
-- **What just happened:** (auto) 2d38729: v0.0.5: project tabs + reactive KPI totals + scroll perf
+- **What just happened:** (auto) 35bca48: v0.0.6: daily-driver loop closed — Show Evidence, Mark Reviewed, Rescan, Markdown export
 - **Current focus:** —
 - **Next action:** (auto-saved from commit — update next action manually)
 - **Blockers:** none
 
 ## Progress log
+
+2026-05-16 16:04 — (auto) 35bca48: v0.0.6: daily-driver loop closed — Show Evidence, Mark Reviewed, Rescan, Markdown export
 
 2026-05-16 15:29 — (auto) 2d38729: v0.0.5: project tabs + reactive KPI totals + scroll perf
 
@@ -85,14 +87,6 @@ _Overwritten by `ab checkpoint` — the compact payload the next agent reads fir
 - 2026-05-16 — Phase B-1 landed: 3 LLM-pattern detectors (vague-title, mock-only-assertions, mocks-unit-under-test); real synthesis (THEATER ≥60 weight / WEAK 1–59 / STRONG 0); narrative + suggestion generators; refresh pipeline wires detect → discover → analyzeQuality → synthesize across ALL projects. Calibrated against survey of `/Users/danilulmashev/Documents/GitHub/Ai-Interior-Design` (Flutter + Firebase Functions). Tests 29/29 (was 18/18 after Phase A.5), compile clean. Pending commit approval.
 
 - 2026-05-16 — Phase A.5 cuts: deleted 9 legacy views + 3 investigator services; rewrote extension.ts (~900 → 50 lines) and package.json contributes (24 commands → 5, 5 tree views → 1); added empty Cases tree provider so viewsWelcome surfaces. Tests 18/18, compile clean. Pending commit approval.
-
-2026-05-16 11:38 — (auto) 5e29340: Pre-detective-redesign baseline
-
-- 2026-05-16 — Phase A scaffold landed: caseFile types + stub synthesis + stub Webview panel + 4 passing unit tests. Compile + tests green at 18/18.
-- 2026-05-16 — Decisions D#12 (info-layer only) and D#13 (LLM as ambient co-worker) locked in `.platform/memory/decisions.md`.
-- 2026-05-16 — Branches: `develop` created from `main`; `feature/detective-redesign` created from `develop`. Worktree skipped per user.
-- 2026-05-16 — Audit synthesized (4 parallel Explore agents) and pasted into `## 🔍 Audit Report` below.
-- 2026-05-16 — Stream created from `detective-redesign` reframe. Audit dispatched: dashboard surface, detective pipeline, signal quality, command + entry surface.
 
 ## Open questions
 

@@ -5,6 +5,7 @@ One line per completed task. Newest at the top. Append-only.
 Format: `YYYY-MM-DD — <task> — <outcome> — <takeaway>`
 
 ---
+- 2026-05-16 — commit `35bca48`: v0.0.6: daily-driver loop closed — Show Evidence, Mark Reviewed, Rescan, Markdown export — auto-logged
 - 2026-05-16 — commit `2d38729`: v0.0.5: project tabs + reactive KPI totals + scroll perf — auto-logged
 - 2026-05-16 — commit `92f98bf`: v0.0.4: dashboard redesign driven by ui-ux-pro-max recommendations — auto-logged
 - 2026-05-16 — commit `7bf181c`: v0.0.3: Case File dashboard polish — filter pills, relative paths, accent borders — auto-logged

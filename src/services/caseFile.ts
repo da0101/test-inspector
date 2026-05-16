@@ -118,24 +118,46 @@ export async function synthesizeCaseFile(
 function classifySourceFile(risk: SourceFileRisk): CaseFile | null {
   const noTests = (risk.relatedTests?.length ?? 0) === 0;
   const linesPct = risk.coverage?.linesPct;
+  const veryLowCoverage = linesPct !== undefined && linesPct < 5;
   const lowCoverage = linesPct !== undefined && linesPct < 50;
   const critical = (risk.criticality ?? 0) > 0;
 
   if (!critical) return null;
   if (!noTests && !lowCoverage) return null;
 
-  const verdict: CaseVerdict = noTests ? 'MISSING' : 'WEAK';
-  const killPriority = Math.max(risk.score ?? 0, noTests ? 60 : 30);
+  // Promote near-zero coverage to MISSING — basename-matched test files often
+  // exist without actually exercising the source. 1% coverage = effectively
+  // untested even if a sibling test file is present.
+  const effectivelyUntested = noTests || veryLowCoverage;
+  const verdict: CaseVerdict = effectivelyUntested ? 'MISSING' : 'WEAK';
+  const killPriority = Math.max(risk.score ?? 0, effectivelyUntested ? 60 : 30);
   const name = path.basename(risk.path);
 
   const signalList: CaseSignal[] = [];
-  for (const sig of risk.signals ?? []) {
-    signalList.push({ name: sig, weight: 10, detail: sig });
+
+  // Collapse criticality keywords into ONE signal — they're a multiplier,
+  // not independent evidence. Listing each as +10 was noise.
+  const criticalitySignals = (risk.signals ?? []);
+  if (criticalitySignals.length > 0) {
+    signalList.push({
+      name: 'high-criticality',
+      weight: Math.min(30, criticalitySignals.length * 6),
+      detail: criticalitySignals.join(', '),
+    });
   }
   if (noTests) {
-    signalList.push({ name: 'no-related-tests', weight: 30, detail: 'no test file imports or covers this source' });
-  }
-  if (lowCoverage && linesPct !== undefined) {
+    signalList.push({
+      name: 'no-related-tests',
+      weight: 30,
+      detail: 'no test file imports or covers this source',
+    });
+  } else if (veryLowCoverage && linesPct !== undefined) {
+    signalList.push({
+      name: 'near-zero-coverage',
+      weight: 30,
+      detail: `${linesPct.toFixed(0)}% line coverage — effectively untested`,
+    });
+  } else if (lowCoverage && linesPct !== undefined) {
     signalList.push({
       name: 'low-line-coverage',
       weight: 20,
@@ -143,14 +165,18 @@ function classifySourceFile(risk: SourceFileRisk): CaseFile | null {
     });
   }
 
-  const signalSummary = (risk.signals ?? []).slice(0, 4).join(', ');
+  const signalSummary = criticalitySignals.slice(0, 4).join(', ');
   const headline = noTests
     ? `${name} — critical code with no tests`
-    : `${name} — critical code with ${linesPct?.toFixed(0)}% coverage`;
+    : veryLowCoverage
+      ? `${name} — critical code with ${linesPct?.toFixed(0)}% coverage (effectively untested)`
+      : `${name} — critical code with ${linesPct?.toFixed(0)}% coverage`;
 
   const paragraph = noTests
     ? `This file looks like critical code (${signalSummary || 'flagged by multiple criticality signals'}) but no test file imports it or covers it. If it breaks, you'll only find out in production. Add a test that exercises the happy path and at least one error path.`
-    : `This file is critical (${signalSummary || 'flagged by multiple criticality signals'}) and only ${linesPct?.toFixed(0)}% of its lines are exercised by the existing tests. The uncovered lines are where bugs hide. Add cases that exercise the error / branch paths the existing tests skip.`;
+    : veryLowCoverage
+      ? `This file is critical (${signalSummary || 'flagged by multiple criticality signals'}) and only ${linesPct?.toFixed(0)}% of its lines are exercised. A test file exists by name but the coverage is so low it's not actually testing this code. Either rewrite that test to drive real behavior, or add a new one.`
+      : `This file is critical (${signalSummary || 'flagged by multiple criticality signals'}) and only ${linesPct?.toFixed(0)}% of its lines are exercised by the existing tests. The uncovered lines are where bugs hide. Add cases that exercise the error / branch paths the existing tests skip.`;
 
   const suggestion: CaseFile['suggestion'] = {
     kind: 'add',
