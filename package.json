@@ -21,8 +21,15 @@
   "homepage": "https://github.com/da0101/test-inspector#readme",
   "activationEvents": [
     "onStartupFinished",
+    "onView:testInspector.targets",
     "onView:testInspector.cases",
+    "onView:testInspector.reports",
     "onView:testInspector.reviewer",
+    "onCommand:testInspector.addRepository",
+    "onCommand:testInspector.removeRepository",
+    "onCommand:testInspector.refreshTargets",
+    "onCommand:testInspector.scanTarget",
+    "onCommand:testInspector.selectFeatureScope",
     "onCommand:testInspector.scan",
     "onCommand:testInspector.openCaseFile",
     "onCommand:testInspector.refresh",
@@ -30,7 +37,7 @@
     "onCommand:testInspector.openDashboard",
     "onCommand:testInspector.configureLlm",
     "onCommand:testInspector.runCurrentFile",
-    "onCommand:testInspector.exportCaseFile"
+    "onCommand:testInspector.generateReport"
   ],
   "main": "./out/src/extension.js",
   "contributes": {
@@ -46,8 +53,17 @@
     "views": {
       "testInspector": [
         {
+          "id": "testInspector.targets",
+          "name": "Targets"
+        },
+        {
           "id": "testInspector.cases",
           "name": "Cases"
+        },
+        {
+          "id": "testInspector.reports",
+          "name": "Reports",
+          "type": "webview"
         },
         {
           "id": "testInspector.reviewer",
@@ -58,11 +74,40 @@
     },
     "viewsWelcome": [
       {
+        "view": "testInspector.targets",
+        "contents": "Track any local repo, then scan one of its existing worktrees.\n\n[Add repository](command:testInspector.addRepository)\n[Refresh targets](command:testInspector.refreshTargets)"
+      },
+      {
         "view": "testInspector.cases",
         "contents": "Test Inspector finds tests that are **theater**, **weak**, or **missing** — without running them.\n\nScanning starts automatically when you open this view. If nothing appears below, click scan.\n\n[Scan this workspace now](command:testInspector.scan)\n[Open Case File panel](command:testInspector.openCaseFile)"
       }
     ],
     "commands": [
+      {
+        "command": "testInspector.addRepository",
+        "title": "Test Inspector: Add Repository",
+        "icon": "$(repo)"
+      },
+      {
+        "command": "testInspector.refreshTargets",
+        "title": "Test Inspector: Refresh Targets",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "testInspector.removeRepository",
+        "title": "Test Inspector: Stop Tracking Repository",
+        "icon": "$(close)"
+      },
+      {
+        "command": "testInspector.scanTarget",
+        "title": "Test Inspector: Scan Target",
+        "icon": "$(search)"
+      },
+      {
+        "command": "testInspector.selectFeatureScope",
+        "title": "Test Inspector: Select Feature Scope",
+        "icon": "$(filter)"
+      },
       {
         "command": "testInspector.openCaseFile",
         "title": "Test Inspector: Open Case File",
@@ -99,27 +144,54 @@
         "icon": "$(run)"
       },
       {
-        "command": "testInspector.exportCaseFile",
-        "title": "Test Inspector: Export Case File",
+        "command": "testInspector.generateReport",
+        "title": "Test Inspector: Generate Report",
         "icon": "$(file-text)"
       }
     ],
     "menus": {
       "view/title": [
         {
+          "command": "testInspector.addRepository",
+          "when": "view == testInspector.targets",
+          "group": "navigation@0"
+        },
+        {
+          "command": "testInspector.refreshTargets",
+          "when": "view == testInspector.targets",
+          "group": "navigation@1"
+        },
+        {
           "command": "testInspector.openCaseFile",
           "when": "view == testInspector.cases",
           "group": "navigation@0"
         },
         {
-          "command": "testInspector.scan",
+          "command": "testInspector.selectFeatureScope",
           "when": "view == testInspector.cases",
           "group": "navigation@1"
         },
         {
-          "command": "testInspector.configureLlm",
+          "command": "testInspector.scan",
           "when": "view == testInspector.cases",
           "group": "navigation@2"
+        },
+        {
+          "command": "testInspector.generateReport",
+          "when": "view == testInspector.cases",
+          "group": "navigation@3"
+        },
+        {
+          "command": "testInspector.configureLlm",
+          "when": "view == testInspector.cases",
+          "group": "navigation@4"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "testInspector.removeRepository",
+          "when": "view == testInspector.targets && viewItem == trackedRepo",
+          "group": "inline@0"
         }
       ]
     },

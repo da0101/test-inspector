@@ -8,7 +8,7 @@ type PackageJson = {
   devDependencies?: Record<string, string>;
 };
 
-const JS_FRAMEWORKS = new Set<TestProject['framework']>(['react', 'firebase-functions']);
+const JS_FRAMEWORKS = new Set<TestProject['framework']>(['node', 'react', 'firebase-functions']);
 
 export async function analyzeSetupIssues(
   projects: TestProject[],

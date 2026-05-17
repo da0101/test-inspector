@@ -5,6 +5,7 @@
 
 | Stream | Type | Status | Agent | Last updated |
 |---|---|---|---|---|
+| [branch-worktree-feature-targeting](branch-worktree-feature-targeting.md) | feature | in-progress | codex | 2026-05-17 |
 | [detective-redesign](archive/detective-redesign.md) | feature | closed | claude-code | 2026-05-16 |
 
 ---

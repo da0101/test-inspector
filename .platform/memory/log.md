@@ -23,3 +23,4 @@ Format: `YYYY-MM-DD — <task> — <outcome> — <takeaway>`
 
 2026-05-16 — ab activation — filled .platform pack (STATUS, architecture, repos, decisions, domains, conventions) from scan + 4-question interview — VS Code extension TS, 5 framework adapters, public Marketplace target, open source; first priorities are marketplace readiness + Phase 1 stabilization + Phase 3 source-to-test mapping
 2026-05-16 — Initialized project with ab — created .platform/ context pack — workflow, conventions, and templates are in place; next task is to fill STATUS.md and architecture.md
+2026-05-17 — branch/worktree feature targeting v1 — added read-only tracked repo/worktree catalog, target scanning, and feature-scoped Case File filtering — native VS Code views keep the UI minimal while globalState makes targets available across windows.

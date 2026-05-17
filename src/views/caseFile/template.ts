@@ -43,6 +43,14 @@ export function renderCaseFileHtml(bundle: CaseFileBundle, opts: RenderOptions):
        ${hiddenNote}
        <button id="clear-filters" class="clear-link" type="button">Clear filters</button>`
     : `<span id="counter">No cases yet</span>${hiddenNote}`;
+  const scope = bundle.scope;
+  const scopeLine = scope && (scope.repoName || scope.worktreePath || scope.featureLabel)
+    ? `<div class="scope-line">
+        ${scope.repoName ? `<span>${escapeInline(scope.repoName)}</span>` : ''}
+        ${scope.branch ? `<span>${escapeInline(scope.branch)}</span>` : ''}
+        ${scope.featureLabel ? `<span>${escapeInline(scope.featureLabel)}</span>` : ''}
+      </div>`
+    : '';
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -57,6 +65,7 @@ export function renderCaseFileHtml(bundle: CaseFileBundle, opts: RenderOptions):
   <header class="hero">
     <h1 class="hero-title">Test Inspector — Case File</h1>
     <p class="hero-subtitle">${subtitle}</p>
+    ${scopeLine}
     ${tabs}
     ${total > 0 ? `<div class="kpi-strip">${kpiTiles}</div>` : ''}
   </header>
@@ -66,4 +75,13 @@ export function renderCaseFileHtml(bundle: CaseFileBundle, opts: RenderOptions):
   <script nonce="${opts.nonce}">${SCRIPT}</script>
 </body>
 </html>`;
+}
+
+function escapeInline(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }

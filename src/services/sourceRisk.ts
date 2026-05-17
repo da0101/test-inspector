@@ -3,6 +3,7 @@ import { promises as fs } from 'fs';
 import { CoverageSummary, QualityFinding, SourceFileRisk, TestFile, TestProject } from '../models';
 import { walkFiles } from '../utils/fs';
 import { basenameWithoutKnownExtensions, isSourceFile, normalizePath } from '../utils/path';
+import { isRelevantSource } from './sourceRiskFilters';
 
 export async function analyzeSourceRisks(
   projects: TestProject[],
@@ -118,7 +119,7 @@ function featureParts(project: TestProject, dir: string, kind: 'source' | 'test'
     if (project.framework === 'flutter' && parts[0] === 'lib') {
       return parts.slice(1);
     }
-    if ((project.framework === 'react' || project.framework === 'firebase-functions') && parts[0] === 'src') {
+    if ((project.framework === 'node' || project.framework === 'react' || project.framework === 'firebase-functions') && parts[0] === 'src') {
       return parts.slice(1);
     }
   }
@@ -280,35 +281,4 @@ function recommendation(signals: string[], relatedTests: number, linesPct: numbe
     return 'Expand tests to cover branches, error states, and user-visible outcomes.';
   }
   return 'Review related tests for meaningful assertions and edge cases.';
-}
-
-function isRelevantSource(project: TestProject, filePath: string): boolean {
-  const rel = normalizePath(path.relative(project.rootPath, filePath));
-  if (
-    /(\.d\.ts|setupTests?\.(js|ts)|testHelpers?\.(js|ts)|mock|fixture|stories\.|\.g\.dart|\.freezed\.dart|\.gr\.dart|\.mocks\.dart)$/.test(rel)
-  ) {
-    return false;
-  }
-  if (/^(coverage|dist|build|out|node_modules|\.next|\.turbo|public|storybook)\//.test(rel)) {
-    return false;
-  }
-  if (project.framework === 'react' || project.framework === 'firebase-functions') {
-    if (/^src\/(assets|img|images|icons|styles|fonts)\//.test(rel)) {
-      return false;
-    }
-    return /^(src|app|pages|components|lib|functions\/src)\//.test(rel);
-  }
-  if (project.framework === 'flutter') {
-    if (
-      /(^|\/)(generated|gen|l10n\/generated)\//.test(rel) ||
-      /(^|\/)(app_localizations(?:_[a-z_]+)?|firebase_options|generated_plugin_registrant)\.dart$/.test(rel)
-    ) {
-      return false;
-    }
-    return /^lib\//.test(rel);
-  }
-  if (project.framework === 'django' || project.framework === 'fastapi') {
-    return !/^tests?\//.test(rel) && !/(^|\/)(migrations)\//.test(rel);
-  }
-  return true;
 }

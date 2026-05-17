@@ -89,6 +89,23 @@ export const STYLE = `
     gap: var(--space-3);
     flex-wrap: wrap;
   }
+  .scope-line {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin: calc(-1 * var(--space-2)) 0 var(--space-4);
+    color: var(--muted);
+    font-size: var(--type-xs);
+  }
+  .scope-line span {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-pill);
+    padding: 2px var(--space-2);
+    max-width: 360px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
   #counter {
     font-variant-numeric: tabular-nums;
   }

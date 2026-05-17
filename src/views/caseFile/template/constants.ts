@@ -32,6 +32,7 @@ export const VERDICT_BLURB: Record<CaseVerdict, string> = {
 
 export function frameworkLabel(framework: string | undefined): string {
   switch (framework) {
+    case 'node': return 'Node.js';
     case 'flutter': return 'Flutter';
     case 'react': return 'React';
     case 'vue': return 'Vue';

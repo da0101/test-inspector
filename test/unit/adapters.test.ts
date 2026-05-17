@@ -15,6 +15,27 @@ test('detects target framework projects from fixtures', async () => {
   );
 });
 
+test('detects this extension as a Node.js test project', async () => {
+  const node = createAdapters().find((adapter) => adapter.id === 'node');
+  assert.ok(node);
+  const projects = await node.detectProjects([process.cwd()]);
+  const project = projects.find((item) => item.rootPath === process.cwd());
+
+  assert.ok(project);
+  assert.equal(project.framework, 'node');
+  assert.equal(project.testCommand, 'npm run test');
+});
+
+test('Node.js self-scan excludes adapter fixture tests', async () => {
+  const node = createAdapters().find((adapter) => adapter.id === 'node');
+  assert.ok(node);
+  const [project] = await node.detectProjects([process.cwd()]);
+  assert.ok(project);
+  const tests = await node.discoverTests(project);
+
+  assert.equal(tests.some((item) => item.path.split(path.sep).join('/').includes('/test/fixtures/')), false);
+});
+
 test('discovers tests and basic quality findings', async () => {
   const react = createAdapters().find((adapter) => adapter.id === 'react');
   assert.ok(react);

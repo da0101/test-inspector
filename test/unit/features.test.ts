@@ -93,3 +93,29 @@ test('detects Firebase Functions feature areas under src folders', async () => {
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test('ignores low-behavior template style files when ranking source risks', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'test-inspector-node-style-risk-'));
+  try {
+    await mkdir(path.join(root, 'src', 'views', 'caseFile', 'template'), { recursive: true });
+    await mkdir(path.join(root, 'src', 'services'), { recursive: true });
+    await writeFile(
+      path.join(root, 'src', 'views', 'caseFile', 'template', 'style.ts'),
+      "export const STYLE = `.btn { color: var(--vscode-foreground); }`;\n"
+    );
+    await writeFile(
+      path.join(root, 'src', 'services', 'reportController.ts'),
+      "export async function generateReport() { if (true) return fetch('/api/report'); }\n"
+    );
+
+    const project = { id: `node:${root}`, rootPath: root, framework: 'node' as const, label: 'Node.js project', configFiles: [] };
+    const risks = await analyzeSourceRisks([project], [], []);
+
+    assert.deepEqual(
+      risks.map((risk) => path.relative(root, risk.path)),
+      ['src/services/reportController.ts']
+    );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});

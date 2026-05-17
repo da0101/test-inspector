@@ -1,11 +1,12 @@
 import { promises as fs } from 'node:fs';
 import * as path from 'node:path';
-import type { CoverageFile, CoverageSummary, QualityFinding, SourceFileRisk, TestFile, TestProject } from '../models';
+import type { CaseFileScopeSummary, CoverageFile, CoverageSummary, QualityFinding, SourceFileRisk, TestFile, TestProject } from '../models';
 import {
   detectMockOnlyAssertions,
   detectMocksUnitUnderTest,
   detectVagueTitles,
 } from './heuristics';
+import { generateStory, generateSuggestion } from './caseFileStory';
 
 export type CaseVerdict = 'THEATER' | 'WEAK' | 'MISSING' | 'STRONG' | 'OK';
 export type SuggestionKind = 'delete' | 'rewrite' | 'add' | 'review' | 'ignore';
@@ -64,6 +65,9 @@ export type CaseFileBundle = {
   scanTimestamp: number;
   project?: TestProject;
   projects?: TestProject[];
+  scope?: CaseFileScopeSummary;
+  testFiles?: TestFile[];
+  coverage?: CoverageSummary[];
   cases: CaseFile[];
   totals: Record<CaseVerdict, number>;
   /** Cases excluded from `cases` because the user marked them reviewed and the file hasn't changed since. */
@@ -76,6 +80,7 @@ export type SynthesizeInput = {
   testFiles?: TestFile[];
   qualityFindings?: QualityFinding[];
   coverage?: CoverageSummary;
+  coverageSummaries?: CoverageSummary[];
   sourceRisks?: SourceFileRisk[];
 };
 
@@ -112,6 +117,8 @@ export async function synthesizeCaseFile(
   const bundle = emptyBundle();
   bundle.project = input.project;
   bundle.projects = input.projects;
+  bundle.testFiles = input.testFiles;
+  bundle.coverage = input.coverageSummaries ?? (input.coverage ? [input.coverage] : undefined);
 
   for (const testFile of input.testFiles ?? []) {
     let content: string | null = null;
@@ -258,60 +265,6 @@ function classifyTestFile(testFile: TestFile, content: string | null): CaseFile 
     story: generateStory(testFile, signals, verdict),
     evidence: { signals, relatedTests: [] },
     suggestion: generateSuggestion(verdict, testFile),
-  };
-}
-
-function generateStory(testFile: TestFile, signals: CaseSignal[], verdict: CaseVerdict): { headline: string; paragraph: string } {
-  const name = path.basename(testFile.path);
-  if (verdict === 'STRONG' || signals.length === 0) {
-    return {
-      headline: name,
-      paragraph: `No theater patterns detected on static signals. Looks like it's doing its job.`,
-    };
-  }
-
-  const reasons: string[] = [];
-  const by = new Map<string, CaseSignal>();
-  for (const s of signals) by.set(s.name, s);
-
-  if (by.has('mocks-unit-under-test')) reasons.push('it mocks the unit under test, so its assertions can never fail meaningfully');
-  if (by.has('mock-only-assertions')) reasons.push("its only assertions are on mock calls, not on returned state or rendered output");
-  if (by.has('trivial-assertion')) reasons.push('the assertions are tautological (`expect(x).toBe(x)` style)');
-  if (by.has('snapshot-only')) reasons.push('the only assertion is a snapshot — it tells you nothing about behavior');
-  if (by.has('no-assertion')) reasons.push('the body contains zero assertions');
-  const vague = by.get('vague-title');
-  if (vague?.detail) reasons.push(vague.detail.toLowerCase());
-  if (by.has('orphan-test') || by.has('weak-test')) reasons.push('it imports no production source from this project');
-  if (by.has('skipped-test')) reasons.push('it is marked skipped — it never runs at all');
-  if (by.has('focused-test')) reasons.push('it uses `.only`/`fit` — other tests in the file are silently skipped');
-  if (by.has('parse-error')) reasons.push('it failed to parse at all');
-
-  if (reasons.length === 0) reasons.push('it carries multiple weak signals when read end-to-end');
-
-  const verdictLabel = verdict === 'THEATER' ? 'Theater test' : 'Weak test';
-  return {
-    headline: `${name} — ${reasons.length} weak signal${reasons.length === 1 ? '' : 's'}`,
-    paragraph: `${verdictLabel}: ${reasons.join('; ')}. It will pass whether the production code is correct or broken. Fix is not "add more assertions" — delete this test and write one that triggers the actual behavior, then asserts on the observable result (returned value, persisted state, or rendered output a user would see).`,
-  };
-}
-
-function generateSuggestion(verdict: CaseVerdict, testFile: TestFile): CaseFile['suggestion'] {
-  const name = path.basename(testFile.path);
-  if (verdict === 'THEATER') {
-    return {
-      kind: 'delete',
-      text: `Delete \`${name}\` and replace it with a test that triggers the unit's behavior and asserts on the observable result (returned value, persisted state, or rendered output).`,
-    };
-  }
-  if (verdict === 'WEAK') {
-    return {
-      kind: 'rewrite',
-      text: `Keep \`${name}\` but extend it: add a case that exercises the error path, and assert on returned state, not just on mock calls.`,
-    };
-  }
-  return {
-    kind: 'review',
-    text: 'Looks healthy on static signals. No action needed.',
   };
 }
 
