@@ -5,6 +5,7 @@ One line per completed task. Newest at the top. Append-only.
 Format: `YYYY-MM-DD — <task> — <outcome> — <takeaway>`
 
 ---
+- 2026-05-17 — commit `697f616`: Update stream checkpoint after reviewer workflow commit — auto-logged
 - 2026-05-17 — commit `c97950a`: Add reliable reviewer report and coverage workflow — auto-logged
 - 2026-05-16 — commit `bee7420`: docs: comprehensive README + MIT LICENSE — auto-logged
 - 2026-05-16 — commit `1ffaee4`: Close detective-redesign stream — auto-logged

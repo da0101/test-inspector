@@ -118,13 +118,15 @@ Make Test Inspector a reliable local-first test reviewer: deterministic findings
 _Overwritten by `ab checkpoint` — the compact payload the next agent reads first. Keep this block under ~10 lines._
 
 - **Last updated:** 2026-05-17 by danilulmashev (auto)
-- **What just happened:** (auto) c97950a: Add reliable reviewer report and coverage workflow
+- **What just happened:** (auto) 697f616: Update stream checkpoint after reviewer workflow commit
 - **Current focus:** —
 - **Next action:** (auto-saved from commit — update next action manually)
 - **Blockers:** none
 
 ## Progress log
 _Append-only. `ab checkpoint` prepends a dated line and auto-trims to the last 10 entries. Format: `YYYY-MM-DD HH:MM — <what happened>`._
+
+2026-05-17 10:19 — (auto) 697f616: Update stream checkpoint after reviewer workflow commit
 
 2026-05-17 10:19 — (auto) c97950a: Add reliable reviewer report and coverage workflow
 
@@ -143,8 +145,6 @@ _Append-only. `ab checkpoint` prepends a dated line and auto-trims to the last 1
 2026-05-17 08:00 — Added Runtime Evidence to the Case File dashboard and reports: test files, test cases passing/discovered, line/branch/function coverage, coverage-run status, and clearer verdict labels such as Strong test files and Missing source files. npm test passes 108/108; npm run coverage succeeds and reports 78.5% line, 66% branch, 70.1% function coverage; VSIX reinstalled.
 
 2026-05-17 07:38 — Completed runtime coverage layer and dogfooding: added Generate Coverage command, Reports sidebar coverage metric/button, coverage report tables, current-file test running, weighted LCOV totals, and a repo-local npm coverage script emitting coverage/lcov.info. npm test passes 107/107; npm run coverage succeeds; self-scan reads 78.1% line, 65% branch, 68.8% function coverage with 29 Strong and no Missing/Weak/Theater; VSIX reinstalled.
-
-2026-05-17 07:36 — Added runtime coverage generation and current-file test running: Reports sidebar now shows line coverage and Generate Coverage, coverage commands are previewed and run only when explicitly configured, parsed reports include line/branch/function/statement coverage, Node current-file runs avoid Jest-only flags. npm test passes 107/107; dogfood self-scan is 29 Strong, 0 Missing/Weak/Theater; VSIX reinstalled.
 
 ## Open questions
 _Things blocked on user input. Remove when resolved._
