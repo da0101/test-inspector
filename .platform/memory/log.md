@@ -5,6 +5,7 @@ One line per completed task. Newest at the top. Append-only.
 Format: `YYYY-MM-DD — <task> — <outcome> — <takeaway>`
 
 ---
+- 2026-05-17 — commit `082f094`: Log release feature commit — auto-logged
 - 2026-05-17 — commit `05825f3`: Release branch worktree feature targeting — auto-logged
 
 2026-05-17 — closed stream branch-worktree-feature-targeting → ./.platform/work/archive/branch-worktree-feature-targeting.md (by danilulmashev)
