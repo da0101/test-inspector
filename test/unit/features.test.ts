@@ -259,3 +259,70 @@ test('flags critical source risk when line coverage is fine but branch coverage 
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test('builds feature areas for node/react/python roots and ignores test-only buckets', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'test-inspector-feature-branches-'));
+  try {
+    const reactRoot = path.join(root, 'react');
+    const nodeRoot = path.join(root, 'node');
+    const pythonRoot = path.join(root, 'api');
+    await mkdir(path.join(reactRoot, 'src', 'js', 'billing'), { recursive: true });
+    await mkdir(path.join(reactRoot, 'pages', 'home'), { recursive: true });
+    await mkdir(path.join(nodeRoot, 'src', 'orders'), { recursive: true });
+    await mkdir(path.join(pythonRoot, 'app'), { recursive: true });
+    await mkdir(path.join(pythonRoot, 'tests'), { recursive: true });
+    await writeFile(path.join(reactRoot, 'src', 'js', 'billing', 'Invoice.tsx'), 'export function Invoice() { return null; }\n');
+    await writeFile(path.join(reactRoot, 'pages', 'home', 'Index.tsx'), 'export function Home() { return null; }\n');
+    await writeFile(path.join(nodeRoot, 'src', 'orders', 'create.ts'), 'export function create() { return 1; }\n');
+    await writeFile(path.join(pythonRoot, 'app', 'main.py'), 'def main(): return 1\n');
+    await writeFile(path.join(pythonRoot, 'tests', 'test_main.py'), 'def test_main(): assert True\n');
+
+    const projects = [
+      { id: `react:${reactRoot}`, rootPath: reactRoot, framework: 'react' as const, label: 'React app', configFiles: [] },
+      { id: `node:${nodeRoot}`, rootPath: nodeRoot, framework: 'node' as const, label: 'Node app', configFiles: [] },
+      { id: `fastapi:${pythonRoot}`, rootPath: pythonRoot, framework: 'fastapi' as const, label: 'FastAPI app', configFiles: [], testCommand: 'pytest' },
+    ];
+
+    const areas = await analyzeFeatureAreas(projects, [], [], []);
+
+    assert.deepEqual(new Set(areas.map((area) => area.label)), new Set(['js / billing', 'pages / home', 'src / orders', 'app']));
+    assert.equal(areas.some((area) => area.label === 'tests'), false);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test('feature areas include related risk tests, coverage average, and framework commands', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'test-inspector-feature-risk-'));
+  try {
+    await mkdir(path.join(root, 'lib', 'auth'), { recursive: true });
+    await mkdir(path.join(root, 'test', 'auth'), { recursive: true });
+    const sourcePath = path.join(root, 'lib', 'auth', 'login.dart');
+    const testPath = path.join(root, 'test', 'auth', 'login_test.dart');
+    await writeFile(sourcePath, 'Future<void> login() async {}\n');
+    await writeFile(testPath, "void main() {}\n");
+
+    const project = { id: `flutter:${root}`, rootPath: root, framework: 'flutter' as const, label: 'Flutter app', configFiles: [], testCommand: 'flutter test' };
+    const areas = await analyzeFeatureAreas(
+      [project],
+      [{ path: testPath, projectId: project.id, status: 'unknown', testCases: [], qualityFindings: [] }],
+      [{ projectId: project.id, files: [{ path: 'lib/auth/login.dart', linesPct: 75 }], totals: { linesPct: 75 } }],
+      [{
+        path: sourcePath,
+        projectId: project.id,
+        score: 80,
+        criticality: 80,
+        signals: ['async/error handling'],
+        relatedTests: [testPath],
+        findings: [],
+        recommendation: 'Add auth tests.',
+      }],
+    );
+
+    assert.equal(areas[0]!.averageCoverage, 75);
+    assert.equal(areas[0]!.riskScore, 80);
+    assert.equal(areas[0]!.recommendedCommand, 'flutter test test/auth/login_test.dart');
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});

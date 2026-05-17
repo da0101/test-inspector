@@ -32,6 +32,62 @@ test('extension activation wires views and commands without scanning untrusted w
   assert.match(outputLines.join('\n'), /refused refresh targets/);
 });
 
+test('extension command callbacks refuse unsafe untrusted test actions', async () => {
+  const registeredCommands: string[] = [];
+  const registeredViews: string[] = [];
+  const outputLines: string[] = [];
+  const warningMessages: string[] = [];
+  const callbacks = new Map<string, (...args: unknown[]) => Promise<unknown>>();
+  const vscode = vscodeActivationMock({ registeredCommands, registeredViews, outputLines, warningMessages, callbacks });
+  const { activate } = loadWithVscodeMock<typeof import('../../src/extension')>(
+    vscode,
+    () => require('../../src/extension'),
+  );
+  const context = contextFixture();
+
+  activate(context as never);
+  await callbacks.get('testInspector.scan')?.();
+  await callbacks.get('testInspector.generateCoverage')?.();
+  await callbacks.get('testInspector.runCurrentFile')?.();
+  await callbacks.get('_testInspector.markReviewed')?.('/repo/src/a.ts');
+
+  assert.match(outputLines.join('\n'), /\[scan\] refused/);
+  assert.match(outputLines.join('\n'), /\[coverage\] refused/);
+  assert.match(outputLines.join('\n'), /\[run\] refused/);
+  assert.match(warningMessages.join('\n'), /not trusted/);
+});
+
+test('extension command callbacks handle trusted no-workspace edge cases', async () => {
+  const registeredCommands: string[] = [];
+  const registeredViews: string[] = [];
+  const outputLines: string[] = [];
+  const infoMessages: string[] = [];
+  const warningMessages: string[] = [];
+  const callbacks = new Map<string, (...args: unknown[]) => Promise<unknown>>();
+  const vscode = vscodeActivationMock({
+    registeredCommands,
+    registeredViews,
+    outputLines,
+    infoMessages,
+    warningMessages,
+    callbacks,
+    trusted: true,
+    workspaceFolders: [],
+  });
+  const { activate } = loadWithVscodeMock<typeof import('../../src/extension')>(
+    vscode,
+    () => require('../../src/extension'),
+  );
+
+  activate(contextFixture() as never);
+  await callbacks.get('testInspector.generateCoverage')?.();
+  await callbacks.get('testInspector.runCurrentFile')?.();
+  await callbacks.get('_testInspector.markReviewed')?.('/repo/src/a.ts');
+
+  assert.match(infoMessages.join('\n'), /open a workspace|open a test file/i);
+  assert.match(warningMessages.join('\n'), /open a workspace folder/i);
+});
+
 function loadWithVscodeMock<T>(vscode: unknown, load: () => T): T {
   const loader = Module as unknown as { _load: (...args: unknown[]) => unknown };
   const original = loader._load;
@@ -47,7 +103,26 @@ function loadWithVscodeMock<T>(vscode: unknown, load: () => T): T {
   }
 }
 
-function vscodeActivationMock(opts: { registeredCommands: string[]; registeredViews: string[]; outputLines: string[] }) {
+function contextFixture() {
+  return {
+    extension: { packageJSON: { version: 'test' } },
+    extensionUri: { fsPath: '/extension' },
+    globalState: { get: (_key: string, fallback: unknown) => fallback, update: async () => {}, keys: () => [] },
+    secrets: { get: async () => undefined, store: async () => {}, delete: async () => {}, onDidChange: () => ({ dispose() {} }) },
+    subscriptions: [],
+  };
+}
+
+function vscodeActivationMock(opts: {
+  registeredCommands: string[];
+  registeredViews: string[];
+  outputLines: string[];
+  infoMessages?: string[];
+  warningMessages?: string[];
+  callbacks?: Map<string, (...args: unknown[]) => Promise<unknown>>;
+  trusted?: boolean;
+  workspaceFolders?: Array<{ uri: { fsPath: string } }>;
+}) {
   class EventEmitter<T> {
     event = () => ({ dispose() {} });
     fire(_value: T): void {}
@@ -81,8 +156,8 @@ function vscodeActivationMock(opts: { registeredCommands: string[]; registeredVi
       joinPath: (uri: { fsPath: string }, ...parts: string[]) => ({ fsPath: [uri.fsPath, ...parts].join('/') }),
     },
     workspace: {
-      isTrusted: false,
-      workspaceFolders: [],
+      isTrusted: opts.trusted ?? false,
+      workspaceFolders: opts.workspaceFolders ?? [],
       getConfiguration: () => ({ get: () => undefined, update: async () => {} }),
       asRelativePath: (value: unknown) => String(value),
       fs: { writeFile: async () => {} },
@@ -98,13 +173,20 @@ function vscodeActivationMock(opts: { registeredCommands: string[]; registeredVi
         opts.registeredViews.push(viewId);
         return disposable;
       },
-      showWarningMessage: async () => undefined,
-      showInformationMessage: async () => undefined,
+      showWarningMessage: async (message: string) => {
+        opts.warningMessages?.push(message);
+        return undefined;
+      },
+      showInformationMessage: async (message: string) => {
+        opts.infoMessages?.push(message);
+        return undefined;
+      },
       withProgress: async (_opts: unknown, task: () => Promise<unknown>) => task(),
     },
     commands: {
-      registerCommand: (command: string) => {
+      registerCommand: (command: string, callback: (...args: unknown[]) => Promise<unknown>) => {
         opts.registeredCommands.push(command);
+        opts.callbacks?.set(command, callback);
         return disposable;
       },
       executeCommand: async () => undefined,

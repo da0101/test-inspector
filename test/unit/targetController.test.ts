@@ -59,6 +59,65 @@ test('target controller publishes a feature-filtered bundle from custom scope', 
   assert.equal(controller.featureScope.kind, 'query');
 });
 
+test('target controller scans only valid worktree/repo pairs and resets feature scope', async () => {
+  const scans: unknown[] = [];
+  const repo = repoFixture();
+  const worktree = repo.worktrees[0]!;
+  const { TargetController } = loadController({ trusted: true });
+  const controller = new TargetController(controllerOptions(undefined, undefined, () => {}, async (target, featureScope) => {
+    scans.push({ target, featureScope });
+  }));
+  controller.setLatestRawBundle(bundleFixture());
+  await controller.selectFeatureScope();
+
+  await controller.scanTarget({ path: '/repo' }, repo);
+  await controller.scanTarget(worktree, repo);
+
+  assert.equal(scans.length, 1);
+  assert.equal(controller.target?.worktree.path, worktree.path);
+  assert.equal(controller.featureScope.kind, 'all');
+});
+
+test('target controller removes tracked repos from string, repo summary, and repo node inputs', async () => {
+  const state = new FakeMemento();
+  await state.update('testInspector.trackedRepoPaths', ['/repo/a', '/repo/b', '/repo/c']);
+  const { TargetController } = loadController({ trusted: true });
+  const controller = new TargetController(controllerOptions(undefined, state));
+
+  await controller.removeRepository('/repo/a');
+  await controller.removeRepository(repoFixture('/repo/b'));
+  await controller.removeRepository({ repo: repoFixture('/repo/c') });
+  await controller.removeRepository(undefined);
+
+  assert.deepEqual(state.get('testInspector.trackedRepoPaths', []), []);
+});
+
+test('target controller feature scope can clear to all features or use a suggested option', async () => {
+  const published: CaseFileBundle[] = [];
+  const { TargetController } = loadController({
+    trusted: true,
+    quickPick: { label: 'All features', query: '' },
+  });
+  const controller = new TargetController(controllerOptions(undefined, undefined, (bundle) => published.push(bundle)));
+  controller.setLatestRawBundle(bundleFixture());
+
+  await controller.selectFeatureScope();
+
+  assert.equal(controller.featureScope.kind, 'all');
+  assert.equal(published[0]!.cases.length, 2);
+
+  const suggested = loadController({
+    trusted: true,
+    quickPick: { label: 'auth', query: 'auth' },
+  });
+  const suggestedController = new suggested.TargetController(controllerOptions(undefined, undefined, (bundle) => published.push(bundle)));
+  suggestedController.setLatestRawBundle(bundleFixture());
+  await suggestedController.selectFeatureScope();
+
+  assert.equal(suggestedController.featureScope.label, 'auth');
+  assert.equal(published[1]!.cases.length, 1);
+});
+
 function loadController(opts: {
   trusted: boolean;
   openDialogPath?: string;
@@ -109,11 +168,12 @@ function controllerOptions(
   output = outputMock(),
   state = new FakeMemento(),
   onPublishBundle: (bundle: CaseFileBundle) => void = () => {},
+  onScanTarget: ConstructorParameters<typeof import('../../src/services/targetController').TargetController>[0]['onScanTarget'] = async () => {},
 ): ConstructorParameters<typeof import('../../src/services/targetController').TargetController>[0] {
   return {
     context: { globalState: state } as unknown as import('vscode').ExtensionContext,
     output: output as unknown as import('vscode').OutputChannel,
-    onScanTarget: async () => {},
+    onScanTarget,
     onPublishBundle,
   };
 }
@@ -210,5 +270,23 @@ function bundleFixture(): CaseFileBundle {
       },
     ],
     totals: { THEATER: 0, WEAK: 0, MISSING: 2, STRONG: 0, OK: 0 },
+  };
+}
+
+function repoFixture(path = '/repo'): import('../../src/models').RepositorySummary {
+  return {
+    id: `repo:${path}`,
+    name: path.split('/').pop() ?? 'repo',
+    path,
+    source: 'tracked',
+    diagnostics: [],
+    worktrees: [{
+      id: `wt:${path}`,
+      repoPath: path,
+      path,
+      branch: 'main',
+      isMain: true,
+      source: 'tracked',
+    }],
   };
 }

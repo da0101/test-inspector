@@ -47,6 +47,45 @@ test('flags missing node_modules separately from test quality', async () => {
   }
 });
 
+test('flags missing test command only when no tests are discovered', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'test-inspector-setup-'));
+  try {
+    const flutter = projectFixture(root, {
+      id: 'flutter:test',
+      framework: 'flutter',
+      label: 'Flutter app',
+      testCommand: undefined,
+    });
+    const withTests = projectFixture(root, {
+      id: 'node:test',
+      framework: 'node',
+      label: 'Node app',
+      testCommand: undefined,
+    });
+
+    const issues = await analyzeSetupIssues([flutter, withTests], [testFileFixture(withTests.id)], []);
+
+    assert.equal(issues.filter((issue) => issue.kind === 'missing-test-command').length, 1);
+    assert.match(issues[0]!.action, /pubspec\.yaml/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test('does not flag missing node_modules when package has no dependencies', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'test-inspector-setup-'));
+  try {
+    const project = projectFixture(root);
+    await writeFile(path.join(root, 'package.json'), JSON.stringify({ scripts: { test: 'node --test' } }));
+
+    const issues = await analyzeSetupIssues([project], [testFileFixture(project.id)], []);
+
+    assert.equal(issues.some((issue) => issue.kind === 'missing-node-modules'), false);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 function projectFixture(rootPath: string, overrides: Partial<TestProject> = {}): TestProject {
   return {
     id: 'firebase-functions:test',

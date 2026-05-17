@@ -82,8 +82,8 @@ Make Test Inspector a reliable local-first test reviewer: deterministic findings
 - [x] Regenerate coverage and confirm Weak count only drops because real gaps were closed.
 
 ### Phase 3 — Feature-Scoped Reliability
-- [ ] Verify feature scope filters source files, test files, verdict cards, reports, and AI context.
-- [ ] Add tests for folder-based features, query-based features, monorepo duplicate feature names, and no-match feature state.
+- [x] Verify feature scope filters source files, test files, verdict cards, reports, and AI context.
+- [x] Add tests for folder-based features, query-based features, monorepo duplicate feature names, and no-match feature state.
 - [ ] Confirm selected feature reports do not leak unrelated app-wide noise.
 
 ### Phase 4 — Coverage Adapter Reliability
@@ -109,7 +109,7 @@ Make Test Inspector a reliable local-first test reviewer: deterministic findings
 - [x] `npm run coverage` passes.
 - [x] Dogfood deterministic report has no obvious nonsense in top findings.
 - [x] Top 10 Weak cards are specific and actionable.
-- [ ] Branch coverage is around 72-75%, or remaining branch gaps are intentionally accepted.
+- [x] Branch coverage is around 72-75%, or remaining branch gaps are intentionally accepted.
 - [ ] Feature-scoped reports work.
 - [x] AI review is optional, safe, and grounded.
 - [ ] Manual VS Code QA passes on at least 2 real repos.
@@ -117,14 +117,16 @@ Make Test Inspector a reliable local-first test reviewer: deterministic findings
 ## Resume state
 _Overwritten by `ab checkpoint` — the compact payload the next agent reads first. Keep this block under ~10 lines._
 
-- **Last updated:** 2026-05-17 by danilulmashev (auto)
-- **What just happened:** (auto) 697f616: Update stream checkpoint after reviewer workflow commit
+- **Last updated:** 2026-05-17 by danilulmashev
+- **What just happened:** Executed release-hardening pass: added focused behavioral tests for AI reviewer/configuration, LLM providers/registry, extension command safety, report/target controllers, runner, coverage controller, test result parsing, Git changed-file risk, setup, feature areas, and source filters; verified npm test 181/181, npm run coverage, regenerated deterministic report at 24 Weak / 37 Strong with 87.7 line / 72.1 branch / 76.4 function coverage, and reinstalled the VSIX.
 - **Current focus:** —
-- **Next action:** (auto-saved from commit — update next action manually)
+- **Next action:** Manual Extension Host QA on two real repos remains the final release-candidate validation step.
 - **Blockers:** none
 
 ## Progress log
 _Append-only. `ab checkpoint` prepends a dated line and auto-trims to the last 10 entries. Format: `YYYY-MM-DD HH:MM — <what happened>`._
+
+2026-05-17 10:56 — Executed release-hardening pass: added focused behavioral tests for AI reviewer/configuration, LLM providers/registry, extension command safety, report/target controllers, runner, coverage controller, test result parsing, Git changed-file risk, setup, feature areas, and source filters; verified npm test 181/181, npm run coverage, regenerated deterministic report at 24 Weak / 37 Strong with 87.7 line / 72.1 branch / 76.4 function coverage, and reinstalled the VSIX.
 
 2026-05-17 10:19 — (auto) 697f616: Update stream checkpoint after reviewer workflow commit
 
@@ -143,8 +145,6 @@ _Append-only. `ab checkpoint` prepends a dated line and auto-trims to the last 1
 2026-05-17 08:13 — Added KPI explanations: runtime metrics and verdict cards now have hover tooltips and aria labels explaining units, coverage source, and distinction between inspected test files and executed test cases. Also fixed stale runtime note to say coverage file loaded when coverage exists without a fresh pass-count run. npm test passes 108/108; VSIX reinstalled.
 
 2026-05-17 08:00 — Added Runtime Evidence to the Case File dashboard and reports: test files, test cases passing/discovered, line/branch/function coverage, coverage-run status, and clearer verdict labels such as Strong test files and Missing source files. npm test passes 108/108; npm run coverage succeeds and reports 78.5% line, 66% branch, 70.1% function coverage; VSIX reinstalled.
-
-2026-05-17 07:38 — Completed runtime coverage layer and dogfooding: added Generate Coverage command, Reports sidebar coverage metric/button, coverage report tables, current-file test running, weighted LCOV totals, and a repo-local npm coverage script emitting coverage/lcov.info. npm test passes 107/107; npm run coverage succeeds; self-scan reads 78.1% line, 65% branch, 68.8% function coverage with 29 Strong and no Missing/Weak/Theater; VSIX reinstalled.
 
 ## Open questions
 _Things blocked on user input. Remove when resolved._

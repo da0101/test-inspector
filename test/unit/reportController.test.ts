@@ -111,6 +111,58 @@ test('report controller preserves deterministic report when AI review fails', as
   assert.match(writes[0]!.content, /Missing source/);
 });
 
+test('report controller interactive flow writes selected groups from quick picks', async () => {
+  const writes: Array<{ path: string; content: string }> = [];
+  const { generateCaseFileReport } = loadWithVscodeMock<typeof import('../../src/services/reportController')>(
+    '../../src/services/reportController',
+    vscodeMock({
+      provider: 'none',
+      savePath: '/repo/from-picker.md',
+      writes,
+      quickPickResults: [
+        { mode: 'deterministic' },
+        [{ verdict: 'STRONG' }],
+      ],
+    }),
+  );
+
+  await generateCaseFileReport({
+    bundle: bundleFixture(),
+    workspaceRoot: '/repo',
+    registry: new Map(),
+    output: outputMock(),
+  });
+
+  assert.match(writes[0]!.content, /Strong test/);
+  assert.doesNotMatch(writes[0]!.content, /Missing source/);
+});
+
+test('report controller interactive flow cancels cleanly for empty bundle or cancelled picks', async () => {
+  const infoMessages: string[] = [];
+  const { generateCaseFileReport } = loadWithVscodeMock<typeof import('../../src/services/reportController')>(
+    '../../src/services/reportController',
+    vscodeMock({ provider: 'none', infoMessages }),
+  );
+
+  await generateCaseFileReport({
+    bundle: { scanTimestamp: 1, cases: [], totals: { THEATER: 0, WEAK: 0, MISSING: 0, STRONG: 0, OK: 0 } },
+    registry: new Map(),
+    output: outputMock(),
+  });
+
+  assert.match(infoMessages.join('\n'), /nothing to report/);
+
+  const cancelled = loadWithVscodeMock<typeof import('../../src/services/reportController')>(
+    '../../src/services/reportController',
+    vscodeMock({ provider: 'none', quickPickResults: [undefined] }),
+  );
+  await cancelled.generateCaseFileReport({
+    bundle: bundleFixture(),
+    registry: new Map(),
+    output: outputMock(),
+  });
+});
+
 function loadWithVscodeMock<T>(request: string, vscode: unknown): T {
   const loader = Module as unknown as { _load: (...args: unknown[]) => unknown };
   const original = loader._load;
@@ -137,13 +189,16 @@ function vscodeMock(opts: {
   writes?: Array<{ path: string; content: string }>;
   provider: string;
   writeError?: Error;
+  quickPickResults?: unknown[];
+  infoMessages?: string[];
 }) {
+  const quickPicks = [...(opts.quickPickResults ?? [])];
   return {
     Uri: { file: (fsPath: string) => ({ fsPath }) },
     window: {
       showSaveDialog: async () => opts.savePath ? { fsPath: opts.savePath } : undefined,
-      showInformationMessage: async () => undefined,
-      showQuickPick: async () => undefined,
+      showInformationMessage: async (message: string) => opts.infoMessages?.push(message),
+      showQuickPick: async () => quickPicks.shift(),
     },
     workspace: {
       asRelativePath: (uri: { fsPath: string }) => uri.fsPath,

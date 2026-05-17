@@ -23,6 +23,20 @@ function ctx(apiKey: string | undefined, key: 'testInspector.llm.openai.apiKey' 
   };
 }
 
+function ctxWithOverrides(
+  apiKey: string | undefined,
+  key: 'testInspector.llm.openai.apiKey' | 'testInspector.llm.claude.apiKey' | 'testInspector.llm.gemini.apiKey',
+  model: string | undefined,
+  baseUrl?: string,
+) {
+  const base = ctx(apiKey, key);
+  return {
+    ...base,
+    getModel: () => model,
+    getBaseUrlOverride: () => baseUrl,
+  };
+}
+
 type HttpCapture = { url: string; headers: Record<string, string>; body?: string; method: string };
 function captureHttp(response: { status: number; body: string }): { http: import('../../src/services/llm/http').HttpRequestInit extends infer T ? (init: T) => Promise<typeof response> : never; calls: HttpCapture[] } {
   const calls: HttpCapture[] = [];
@@ -71,6 +85,31 @@ test('llm-openai · returns error when API key is not configured', async () => {
   assert.match(res.error, /not configured/i);
 });
 
+test('llm-openai · reports malformed JSON responses and honors model/base overrides', async () => {
+  const { http, calls } = captureHttp({ status: 200, body: 'not json' });
+  const provider = new OpenAiProvider(ctxWithOverrides('sk-test', 'testInspector.llm.openai.apiKey', 'gpt-custom', 'https://openai.local/v9/'), http);
+
+  const res = await provider.complete({ system: 'sys', user: 'usr' });
+
+  assert.ok(!res.ok);
+  assert.match(res.error, /response was not JSON/);
+  assert.equal(calls[0]!.url, 'https://openai.local/v9/chat/completions');
+  assert.equal(JSON.parse(calls[0]!.body ?? '{}').model, 'gpt-custom');
+});
+
+test('llm-openai · testConnection delegates to completion with a small JSON request', async () => {
+  const { http, calls } = captureHttp({
+    status: 200,
+    body: JSON.stringify({ choices: [{ message: { content: '{"ok":true}' } }], model: 'gpt-test' }),
+  });
+  const provider = new OpenAiProvider(ctx('sk-test', 'testInspector.llm.openai.apiKey'), http);
+
+  const res = await provider.testConnection();
+
+  assert.ok(res.ok);
+  assert.equal(JSON.parse(calls[0]!.body ?? '{}').max_tokens, 8);
+});
+
 // ---------- Claude ----------
 
 test('llm-claude · sends x-api-key + anthropic-version headers and system+messages body', async () => {
@@ -101,6 +140,36 @@ test('llm-claude · finds the text part among multiple content blocks', async ()
   assert.ok(res.ok);
   // .find() returns the first match — Claude convention is one text block per response.
   assert.equal(res.text, 'the answer');
+});
+
+test('llm-claude · returns setup and malformed-response errors deterministically', async () => {
+  const unconfigured = new ClaudeProvider(ctx(undefined, 'testInspector.llm.claude.apiKey'));
+  const missingKey = await unconfigured.complete({ system: '', user: '' });
+  assert.ok(!missingKey.ok);
+  assert.match(missingKey.error, /not configured/i);
+
+  const { http } = captureHttp({ status: 200, body: '{bad json' });
+  const provider = new ClaudeProvider(ctx('sk-ant-test', 'testInspector.llm.claude.apiKey'), http);
+  const malformed = await provider.complete({ system: '', user: '' });
+  assert.ok(!malformed.ok);
+  assert.match(malformed.error, /response was not JSON/);
+});
+
+test('llm-claude · returns HTTP errors and falls back to configured model when response omits one', async () => {
+  const errorProvider = new ClaudeProvider(
+    ctx('sk-ant-test', 'testInspector.llm.claude.apiKey'),
+    captureHttp({ status: 500, body: 'anthropic down' }).http,
+  );
+  const failed = await errorProvider.complete({ system: '', user: '' });
+  assert.ok(!failed.ok);
+  assert.match(failed.error, /HTTP 500/);
+
+  const { http } = captureHttp({ status: 200, body: JSON.stringify({ content: [] }) });
+  const provider = new ClaudeProvider(ctxWithOverrides('sk-ant-test', 'testInspector.llm.claude.apiKey', 'claude-custom'), http);
+  const res = await provider.testConnection();
+  assert.ok(res.ok);
+  assert.equal(res.modelUsed, 'claude-custom');
+  assert.equal(res.text, '');
 });
 
 // ---------- Gemini ----------
@@ -143,4 +212,23 @@ test('llm-gemini · surfaces HTTP 400 from Gemini with the response body', async
   assert.ok(!res.ok);
   assert.match(res.error, /HTTP 400/);
   assert.match(res.error, /API key invalid/);
+});
+
+test('llm-gemini · returns setup and malformed-response errors deterministically', async () => {
+  const unconfigured = new GeminiProvider(ctx(undefined, 'testInspector.llm.gemini.apiKey'));
+  const missingKey = await unconfigured.complete({ system: '', user: '' });
+  assert.ok(!missingKey.ok);
+  assert.match(missingKey.error, /not configured/i);
+
+  const { http } = captureHttp({ status: 200, body: 'not json' });
+  const provider = new GeminiProvider(ctx('AIzaSy-test', 'testInspector.llm.gemini.apiKey'), http);
+  const malformed = await provider.complete({ system: '', user: '' });
+  assert.ok(!malformed.ok);
+  assert.match(malformed.error, /response was not JSON/);
+});
+
+test('llm providers report configured state from SecretStorage', async () => {
+  assert.equal(await new OpenAiProvider(ctx('sk', 'testInspector.llm.openai.apiKey')).isConfigured(), true);
+  assert.equal(await new ClaudeProvider(ctx(undefined, 'testInspector.llm.claude.apiKey')).isConfigured(), false);
+  assert.equal(await new GeminiProvider(ctx('key', 'testInspector.llm.gemini.apiKey')).isConfigured(), true);
 });
