@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import * as path from 'node:path';
 import { test } from 'node:test';
 import { createAdapters } from '../../src/adapters';
+import type { TestProject } from '../../src/models';
+import { findFlutterSmells } from '../../src/services/qualityFlutter';
 
 const fixtureRoot = path.resolve(process.cwd(), 'test/fixtures');
 
@@ -26,3 +28,44 @@ test('flutter-quality · catches render-only widget tests with no interaction', 
   const renderOnly = findings.filter((f) => f.kind === 'weak-test' && /render-only widget test/i.test(f.message));
   assert.ok(renderOnly.length >= 1, `expected ≥1 render-only widget test finding, got ${renderOnly.length}`);
 });
+
+test('flutter-quality · ignores widget tests with user interaction or unparsable bodies', () => {
+  const project = flutterProjectFixture();
+  const content = [
+    "testWidgets('submits login form', (tester) async {",
+    "  await tester.pumpWidget(LoginForm());",
+    "  await tester.enterText(find.byType(TextField), 'dan');",
+    "  await tester.tap(find.text('Submit'));",
+    "  expect(find.text('Saved'), findsOneWidget);",
+    "});",
+    "testWidgets('missing body', (tester) async",
+  ].join('\n');
+
+  const findings = findFlutterSmells(project, '/repo/test/login_test.dart', content);
+
+  assert.equal(findings.some((finding) => finding.kind === 'weak-test'), false);
+});
+
+test('flutter-quality · catches mock-only verify tests without behavior assertions', () => {
+  const project = flutterProjectFixture();
+  const content = [
+    "test('notifies repository', () {",
+    "  verify(() => repo.save()).called(1);",
+    "  verifyNever(() => repo.delete());",
+    "});",
+  ].join('\n');
+
+  const findings = findFlutterSmells(project, '/repo/test/repo_test.dart', content);
+
+  assert.ok(findings.some((finding) => finding.kind === 'weak-test' && /Mock-only/.test(finding.message)));
+});
+
+function flutterProjectFixture(): TestProject {
+  return {
+    id: 'flutter:/repo',
+    rootPath: '/repo',
+    framework: 'flutter',
+    label: 'Flutter app',
+    configFiles: [],
+  };
+}

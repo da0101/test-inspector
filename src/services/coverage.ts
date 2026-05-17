@@ -41,6 +41,7 @@ export async function readProjectCoverage(project: TestProject): Promise<Coverag
 
 export function parseLcov(text: string, projectId: string, projectRoot = ''): CoverageSummary {
   const files: CoverageFile[] = [];
+  const totals = { linesHit: 0, linesFound: 0, functionsHit: 0, functionsFound: 0, branchesHit: 0, branchesFound: 0 };
   let current: {
     path?: string;
     linesFound?: number;
@@ -49,6 +50,10 @@ export function parseLcov(text: string, projectId: string, projectRoot = ''): Co
     functionsHit?: number;
     branchesFound?: number;
     branchesHit?: number;
+    lineCounts: Map<number, number>;
+    functionLines: Array<{ line: number; name: string }>;
+    functionHits: Array<{ name: string; hits: number }>;
+    branches: Array<{ line: number; hits: number | null }>;
     uncoveredLines: number[];
   } | null = null;
 
@@ -58,13 +63,40 @@ export function parseLcov(text: string, projectId: string, projectRoot = ''): Co
       continue;
     }
     if (line.startsWith('SF:')) {
-      current = { path: normalizeCoveragePath(line.slice(3), projectRoot), uncoveredLines: [] };
+      current = {
+        path: normalizeCoveragePath(line.slice(3), projectRoot),
+        lineCounts: new Map(),
+        functionLines: [],
+        functionHits: [],
+        branches: [],
+        uncoveredLines: []
+      };
     } else if (current && line.startsWith('DA:')) {
       const [lineNumberText, countText] = line.slice(3).split(',');
       const lineNumber = Number(lineNumberText);
       const count = Number(countText);
-      if (Number.isFinite(lineNumber) && count === 0) {
-        current.uncoveredLines.push(lineNumber);
+      if (Number.isFinite(lineNumber) && Number.isFinite(count) && !isGeneratedTypeScriptHelperLine(current.path ?? '', lineNumber)) {
+        current.lineCounts.set(lineNumber, count);
+        if (count === 0) {
+          current.uncoveredLines.push(lineNumber);
+        }
+      }
+    } else if (current && line.startsWith('FN:')) {
+      const [lineNumberText, ...nameParts] = line.slice(3).split(',');
+      const lineNumber = Number(lineNumberText);
+      const name = nameParts.join(',');
+      if (Number.isFinite(lineNumber) && !isGeneratedTypeScriptHelperLine(current.path ?? '', lineNumber, name)) {
+        current.functionLines.push({ line: lineNumber, name });
+      }
+    } else if (current && line.startsWith('FNDA:')) {
+      const [countText, ...nameParts] = line.slice(5).split(',');
+      const count = Number(countText);
+      if (Number.isFinite(count)) current.functionHits.push({ name: nameParts.join(','), hits: count });
+    } else if (current && line.startsWith('BRDA:')) {
+      const [lineNumberText, , , hitsText] = line.slice(5).split(',');
+      const lineNumber = Number(lineNumberText);
+      if (Number.isFinite(lineNumber) && !isGeneratedTypeScriptHelperLine(current.path ?? '', lineNumber)) {
+        current.branches.push({ line: lineNumber, hits: hitsText === '-' ? null : Number(hitsText) });
       }
     } else if (current && line.startsWith('LF:')) {
       current.linesFound = Number(line.slice(3));
@@ -79,18 +111,61 @@ export function parseLcov(text: string, projectId: string, projectRoot = ''): Co
     } else if (current && line.startsWith('BRH:')) {
       current.branchesHit = Number(line.slice(4));
     } else if (current && line === 'end_of_record') {
+      const lineStats = current.lineCounts.size > 0
+        ? { found: current.lineCounts.size, hit: [...current.lineCounts.values()].filter((count) => count > 0).length }
+        : { found: current.linesFound ?? 0, hit: current.linesHit ?? 0 };
+      const functionStats = summarizeFunctions(current.functionLines, current.functionHits, current.functionsFound, current.functionsHit);
+      const branchStats = current.branches.length > 0
+        ? { found: current.branches.length, hit: current.branches.filter((branch) => branch.hits !== null && branch.hits > 0).length }
+        : { found: current.branchesFound ?? 0, hit: current.branchesHit ?? 0 };
+      totals.linesHit += lineStats.hit;
+      totals.linesFound += lineStats.found;
+      totals.functionsHit += functionStats.hit;
+      totals.functionsFound += functionStats.found;
+      totals.branchesHit += branchStats.hit;
+      totals.branchesFound += branchStats.found;
       files.push({
         path: current.path ?? '',
-        linesPct: pct(current.linesHit, current.linesFound),
-        branchesPct: pct(current.branchesHit, current.branchesFound),
-        functionsPct: pct(current.functionsHit, current.functionsFound),
+        linesPct: pct(lineStats.hit, lineStats.found),
+        branchesPct: pct(branchStats.hit, branchStats.found),
+        functionsPct: pct(functionStats.hit, functionStats.found),
         uncoveredLines: current.uncoveredLines
       });
       current = null;
     }
   }
 
-  return { projectId, files, totals: summarizeCoverage(files) };
+  return {
+    projectId,
+    files,
+    totals: {
+      linesPct: pct(totals.linesHit, totals.linesFound),
+      functionsPct: pct(totals.functionsHit, totals.functionsFound),
+      branchesPct: pct(totals.branchesHit, totals.branchesFound)
+    }
+  };
+}
+
+function summarizeFunctions(
+  functions: Array<{ line: number; name: string }>,
+  hits: Array<{ name: string; hits: number }>,
+  fallbackFound?: number,
+  fallbackHit?: number
+): { found: number; hit: number } {
+  if (functions.length === 0) return { found: fallbackFound ?? 0, hit: fallbackHit ?? 0 };
+  const hitsByName = new Map<string, number[]>();
+  for (const item of hits) {
+    const values = hitsByName.get(item.name) ?? [];
+    values.push(item.hits);
+    hitsByName.set(item.name, values);
+  }
+  let hit = 0;
+  for (const fn of functions) {
+    const values = hitsByName.get(fn.name);
+    const count = values?.shift() ?? 0;
+    if (count > 0) hit++;
+  }
+  return { found: functions.length, hit };
 }
 
 type CoveragePyJson = {
@@ -131,9 +206,13 @@ export function parseCoveragePyJson(json: CoveragePyJson, projectId: string, pro
 export function parseCoveragePyXml(xml: string, projectId: string, projectRoot = ''): CoverageSummary {
   const root = parseXmlLite(xml);
   const classes = findXmlNodes(root, 'class');
+  let totalLines = 0;
+  let coveredLines = 0;
   const files = classes.map((node) => {
     const lineRate = Number(node.attributes['line-rate']);
     const lineNodes = findXmlNodes(node, 'line');
+    totalLines += lineNodes.length;
+    coveredLines += lineNodes.filter((line) => Number(line.attributes.hits) > 0).length;
     return {
       path: normalizeCoveragePath(node.attributes.filename ?? '', projectRoot),
       linesPct: Number.isFinite(lineRate) ? lineRate * 100 : undefined,
@@ -144,7 +223,14 @@ export function parseCoveragePyXml(xml: string, projectId: string, projectRoot =
         .filter(Number.isFinite)
     };
   });
-  return { projectId, files, totals: summarizeCoverage(files) };
+  return {
+    projectId,
+    files,
+    totals: {
+      ...summarizeCoverage(files),
+      linesPct: pct(coveredLines, totalLines)
+    }
+  };
 }
 
 export function summarizeCoverage(files: CoverageFile[]): CoverageSummary['totals'] {
@@ -177,6 +263,14 @@ function average(values: Array<number | undefined>): number | undefined {
     return undefined;
   }
   return Math.round((present.reduce((sum, value) => sum + value, 0) / present.length) * 10) / 10;
+}
+
+function isGeneratedTypeScriptHelperLine(filePath: string, lineNumber: number, name = ''): boolean {
+  const normalized = filePath.split(path.sep).join('/');
+  if (!/^out\/src\/.*\.js$/.test(normalized)) {
+    return false;
+  }
+  return lineNumber <= 34 || name.startsWith('__') || name === 'ownKeys';
 }
 
 function normalizeCoveragePath(filePath: string, projectRoot: string): string {

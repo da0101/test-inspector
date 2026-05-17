@@ -15,4 +15,6 @@ Format: `🔴 [domain or file] — one-line gotcha (incident date if applicable)
 
 <!-- agentboard:gotchas:begin -->
 <!-- New entries go below, newest first. Keep entries to one line each. -->
+🟡 [workspace-scope/reports] — Centralized-host report exports must default to the selected worktree, not the Test Inspector repo that happens to host the extension window (2026-05-17).
+🟡 [coverage/lcov] — Node's compiled TypeScript LCOV includes CommonJS helper boilerplate under `out/src`; ignore generated helper lines/functions or the analyzer creates false Weak cards (2026-05-17).
 <!-- agentboard:gotchas:end -->

@@ -47,6 +47,7 @@ const VERDICT_ICON: Record<CaseVerdict, vscode.ThemeIcon> = {
 };
 
 const FRAMEWORK_ICON: Record<string, string> = {
+  node: 'symbol-method',
   flutter: 'device-mobile',
   react: 'browser',
   vue: 'browser',

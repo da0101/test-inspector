@@ -1,11 +1,13 @@
 import { promises as fs } from 'node:fs';
 import * as path from 'node:path';
-import type { CoverageFile, CoverageSummary, QualityFinding, SourceFileRisk, TestFile, TestProject } from '../models';
+import type { CaseFileScopeSummary, CoverageFile, CoverageSummary, QualityFinding, SourceFileRisk, TestFile, TestProject } from '../models';
 import {
   detectMockOnlyAssertions,
   detectMocksUnitUnderTest,
   detectVagueTitles,
 } from './heuristics';
+import { generateStory, generateSuggestion } from './caseFileStory';
+import { inferTestGaps, type TestGap } from './testGaps';
 
 export type CaseVerdict = 'THEATER' | 'WEAK' | 'MISSING' | 'STRONG' | 'OK';
 export type SuggestionKind = 'delete' | 'rewrite' | 'add' | 'review' | 'ignore';
@@ -31,6 +33,7 @@ export type CaseFile = {
     signals: CaseSignal[];
     relatedTests: CaseRelatedTest[];
     coverage?: CoverageFile;
+    gaps?: TestGap[];
   };
   suggestion: {
     kind: SuggestionKind;
@@ -64,10 +67,20 @@ export type CaseFileBundle = {
   scanTimestamp: number;
   project?: TestProject;
   projects?: TestProject[];
+  scope?: CaseFileScopeSummary;
+  testFiles?: TestFile[];
+  coverage?: CoverageSummary[];
   cases: CaseFile[];
   totals: Record<CaseVerdict, number>;
   /** Cases excluded from `cases` because the user marked them reviewed and the file hasn't changed since. */
   hiddenReviewedCount?: number;
+  runtime?: {
+    testCases: number;
+    passed?: number;
+    failed?: number;
+    generatedAt?: number;
+    command?: string;
+  };
 };
 
 export type SynthesizeInput = {
@@ -76,6 +89,7 @@ export type SynthesizeInput = {
   testFiles?: TestFile[];
   qualityFindings?: QualityFinding[];
   coverage?: CoverageSummary;
+  coverageSummaries?: CoverageSummary[];
   sourceRisks?: SourceFileRisk[];
 };
 
@@ -112,6 +126,9 @@ export async function synthesizeCaseFile(
   const bundle = emptyBundle();
   bundle.project = input.project;
   bundle.projects = input.projects;
+  bundle.testFiles = input.testFiles;
+  bundle.coverage = input.coverageSummaries ?? (input.coverage ? [input.coverage] : undefined);
+  bundle.runtime = { testCases: (input.testFiles ?? []).reduce((sum, file) => sum + file.testCases.length, 0) };
 
   for (const testFile of input.testFiles ?? []) {
     let content: string | null = null;
@@ -139,12 +156,17 @@ export async function synthesizeCaseFile(
 function classifySourceFile(risk: SourceFileRisk): CaseFile | null {
   const noTests = (risk.relatedTests?.length ?? 0) === 0;
   const linesPct = risk.coverage?.linesPct;
+  const branchesPct = risk.coverage?.branchesPct;
+  const functionsPct = risk.coverage?.functionsPct;
   const veryLowCoverage = linesPct !== undefined && linesPct < 5;
   const lowCoverage = linesPct !== undefined && linesPct < 50;
+  const lowBranchCoverage = branchesPct !== undefined && branchesPct < 70;
+  const lowFunctionCoverage = functionsPct !== undefined && functionsPct < 70;
+  const lowScenarioCoverage = lowBranchCoverage || lowFunctionCoverage;
   const critical = (risk.criticality ?? 0) > 0;
 
   if (!critical) return null;
-  if (!noTests && !lowCoverage) return null;
+  if (!noTests && !lowCoverage && !lowScenarioCoverage) return null;
 
   // Promote near-zero coverage to MISSING — basename-matched test files often
   // exist without actually exercising the source. 1% coverage = effectively
@@ -185,28 +207,43 @@ function classifySourceFile(risk: SourceFileRisk): CaseFile | null {
       detail: `${linesPct.toFixed(0)}% line coverage`,
     });
   }
+  if (lowBranchCoverage && branchesPct !== undefined) {
+    signalList.push({
+      name: 'low-branch-coverage',
+      weight: 18,
+      detail: `${branchesPct.toFixed(0)}% branch coverage — alternate paths need tests`,
+    });
+  }
+  if (lowFunctionCoverage && functionsPct !== undefined) {
+    signalList.push({
+      name: 'low-function-coverage',
+      weight: 12,
+      detail: `${functionsPct.toFixed(0)}% function coverage — some functions are unreached`,
+    });
+  }
 
   const signalSummary = criticalitySignals.slice(0, 4).join(', ');
   const headline = noTests
     ? `${name} — critical code with no tests`
     : veryLowCoverage
       ? `${name} — critical code with ${linesPct?.toFixed(0)}% coverage (effectively untested)`
-      : `${name} — critical code with ${linesPct?.toFixed(0)}% coverage`;
+      : lowCoverage
+        ? `${name} — critical code with ${linesPct?.toFixed(0)}% coverage`
+        : `${name} — critical code with untested branches/functions`;
 
   const paragraph = noTests
     ? `This file looks like critical code (${signalSummary || 'flagged by multiple criticality signals'}) but no test file imports it or covers it. If it breaks, you'll only find out in production. Add a test that exercises the happy path and at least one error path.`
     : veryLowCoverage
       ? `This file is critical (${signalSummary || 'flagged by multiple criticality signals'}) and only ${linesPct?.toFixed(0)}% of its lines are exercised. A test file exists by name but the coverage is so low it's not actually testing this code. Either rewrite that test to drive real behavior, or add a new one.`
-      : `This file is critical (${signalSummary || 'flagged by multiple criticality signals'}) and only ${linesPct?.toFixed(0)}% of its lines are exercised by the existing tests. The uncovered lines are where bugs hide. Add cases that exercise the error / branch paths the existing tests skip.`;
+      : lowCoverage
+        ? `This file is critical (${signalSummary || 'flagged by multiple criticality signals'}) and only ${linesPct?.toFixed(0)}% of its lines are exercised by the existing tests. The uncovered lines are where bugs hide. Add cases that exercise the error / branch paths the existing tests skip.`
+        : `This file is critical (${signalSummary || 'flagged by multiple criticality signals'}) and the latest coverage shows weak branch/function evidence. Existing tests reach the file, but they do not prove enough alternate outcomes. Add cases for the skipped decisions and unreached functions.`;
 
   const suggestion: CaseFile['suggestion'] = {
     kind: 'add',
-    text: risk.recommendation
-      ? risk.recommendation
-      : noTests
-        ? `Add a new test file that imports and exercises \`${name}\`. Start with one happy-path case + one error-path case.`
-        : `Extend existing tests for \`${name}\` to cover the uncovered lines (the error / branch paths).`,
+    text: sourceSuggestionText(risk, name, noTests),
   };
+  const gaps = inferTestGaps(risk);
 
   return {
     target: { kind: 'source', path: risk.path, projectId: risk.projectId },
@@ -217,9 +254,20 @@ function classifySourceFile(risk: SourceFileRisk): CaseFile | null {
       signals: signalList,
       relatedTests: (risk.relatedTests ?? []).map((p) => ({ path: p, weaknesses: [] })),
       coverage: risk.coverage,
+      gaps,
     },
     suggestion,
   };
+}
+
+function sourceSuggestionText(risk: SourceFileRisk, name: string, noTests: boolean): string {
+  const base = risk.recommendation
+    ? risk.recommendation
+    : noTests
+      ? `Add a new test file that imports and exercises \`${name}\`. Start with one happy-path case + one error-path case.`
+      : `Extend existing tests for \`${name}\` to cover the uncovered lines (the error / branch paths).`;
+  const firstGap = inferTestGaps(risk)[0];
+  return firstGap ? `${base} Start with: ${firstGap.suggestedTest}` : base;
 }
 
 function classifyTestFile(testFile: TestFile, content: string | null): CaseFile {
@@ -258,60 +306,6 @@ function classifyTestFile(testFile: TestFile, content: string | null): CaseFile 
     story: generateStory(testFile, signals, verdict),
     evidence: { signals, relatedTests: [] },
     suggestion: generateSuggestion(verdict, testFile),
-  };
-}
-
-function generateStory(testFile: TestFile, signals: CaseSignal[], verdict: CaseVerdict): { headline: string; paragraph: string } {
-  const name = path.basename(testFile.path);
-  if (verdict === 'STRONG' || signals.length === 0) {
-    return {
-      headline: name,
-      paragraph: `No theater patterns detected on static signals. Looks like it's doing its job.`,
-    };
-  }
-
-  const reasons: string[] = [];
-  const by = new Map<string, CaseSignal>();
-  for (const s of signals) by.set(s.name, s);
-
-  if (by.has('mocks-unit-under-test')) reasons.push('it mocks the unit under test, so its assertions can never fail meaningfully');
-  if (by.has('mock-only-assertions')) reasons.push("its only assertions are on mock calls, not on returned state or rendered output");
-  if (by.has('trivial-assertion')) reasons.push('the assertions are tautological (`expect(x).toBe(x)` style)');
-  if (by.has('snapshot-only')) reasons.push('the only assertion is a snapshot — it tells you nothing about behavior');
-  if (by.has('no-assertion')) reasons.push('the body contains zero assertions');
-  const vague = by.get('vague-title');
-  if (vague?.detail) reasons.push(vague.detail.toLowerCase());
-  if (by.has('orphan-test') || by.has('weak-test')) reasons.push('it imports no production source from this project');
-  if (by.has('skipped-test')) reasons.push('it is marked skipped — it never runs at all');
-  if (by.has('focused-test')) reasons.push('it uses `.only`/`fit` — other tests in the file are silently skipped');
-  if (by.has('parse-error')) reasons.push('it failed to parse at all');
-
-  if (reasons.length === 0) reasons.push('it carries multiple weak signals when read end-to-end');
-
-  const verdictLabel = verdict === 'THEATER' ? 'Theater test' : 'Weak test';
-  return {
-    headline: `${name} — ${reasons.length} weak signal${reasons.length === 1 ? '' : 's'}`,
-    paragraph: `${verdictLabel}: ${reasons.join('; ')}. It will pass whether the production code is correct or broken. Fix is not "add more assertions" — delete this test and write one that triggers the actual behavior, then asserts on the observable result (returned value, persisted state, or rendered output a user would see).`,
-  };
-}
-
-function generateSuggestion(verdict: CaseVerdict, testFile: TestFile): CaseFile['suggestion'] {
-  const name = path.basename(testFile.path);
-  if (verdict === 'THEATER') {
-    return {
-      kind: 'delete',
-      text: `Delete \`${name}\` and replace it with a test that triggers the unit's behavior and asserts on the observable result (returned value, persisted state, or rendered output).`,
-    };
-  }
-  if (verdict === 'WEAK') {
-    return {
-      kind: 'rewrite',
-      text: `Keep \`${name}\` but extend it: add a case that exercises the error path, and assert on returned state, not just on mock calls.`,
-    };
-  }
-  return {
-    kind: 'review',
-    text: 'Looks healthy on static signals. No action needed.',
   };
 }
 

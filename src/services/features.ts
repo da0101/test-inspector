@@ -76,7 +76,7 @@ function featureKey(project: TestProject, filePath: string): { id: string; rootP
       };
     }
   }
-  if (project.framework === 'react' || project.framework === 'firebase-functions') {
+  if (project.framework === 'node' || project.framework === 'react' || project.framework === 'firebase-functions') {
     const featureRoots = ['features', 'pages', 'routes', 'modules', 'domains'];
     const rootIndex = parts.findIndex((part) => featureRoots.includes(part));
     if (rootIndex >= 0 && parts[rootIndex + 1]) {
@@ -94,6 +94,9 @@ function featureKey(project: TestProject, filePath: string): { id: string; rootP
   }
   if (project.framework === 'flutter' && parts[0] === 'lib' && parts[1]) {
     return { id: `lib/${parts[1]}`, rootPath: path.join(project.rootPath, 'lib', parts[1]) };
+  }
+  if (project.framework === 'node' && parts[0] === 'src' && parts[1]) {
+    return { id: `src/${parts[1]}`, rootPath: path.join(project.rootPath, 'src', parts[1]) };
   }
   if ((project.framework === 'django' || project.framework === 'fastapi') && parts[0]) {
     return { id: parts[0], rootPath: path.join(project.rootPath, parts[0]) };

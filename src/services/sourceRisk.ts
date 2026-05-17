@@ -3,6 +3,8 @@ import { promises as fs } from 'fs';
 import { CoverageSummary, QualityFinding, SourceFileRisk, TestFile, TestProject } from '../models';
 import { walkFiles } from '../utils/fs';
 import { basenameWithoutKnownExtensions, isSourceFile, normalizePath } from '../utils/path';
+import { buildRelatedTestsByImportGraph } from './importGraph';
+import { isRelevantSource } from './sourceRiskFilters';
 
 export async function analyzeSourceRisks(
   projects: TestProject[],
@@ -11,7 +13,7 @@ export async function analyzeSourceRisks(
 ): Promise<SourceFileRisk[]> {
   const risks: SourceFileRisk[] = [];
   for (const project of projects) {
-    const relatedByImport = await buildImportMap(project, tests);
+    const relatedByImport = await buildRelatedTestsByImportGraph(project, tests);
     const sourceFiles = await walkFiles(project.rootPath, {
       include: (filePath) => isSourceFile(filePath) && isRelevantSource(project, filePath)
     });
@@ -26,7 +28,7 @@ export async function analyzeSourceRisks(
       const rel = normalizePath(path.relative(project.rootPath, sourceFile));
       const text = await fs.readFile(sourceFile, 'utf8').catch(() => '');
       const profile = profileSource(project, rel, text);
-      const coverageFile = projectCoverage?.files.find((file) => file.path === rel || file.path.endsWith(`/${rel}`));
+      const coverageFile = projectCoverage?.files.find((file) => coveragePathMatchesSource(file.path, rel));
       const findings: QualityFinding[] = [];
       if (relatedTests.length === 0) {
         findings.push({
@@ -55,9 +57,41 @@ export async function analyzeSourceRisks(
           filePath: sourceFile
         });
       }
-      let score = scoreRisk(profile.criticality, relatedTests.length, coverageFile?.linesPct, Boolean(projectCoverage), findings.length);
+      if (coverageFile?.branchesPct !== undefined && coverageFile.branchesPct < 70) {
+        findings.push({
+          id: `${project.id}:low-branch-coverage:${rel}`,
+          kind: 'missing-coverage',
+          severity: 'warning',
+          message: `Low branch coverage: ${coverageFile.branchesPct}%.`,
+          filePath: sourceFile
+        });
+      }
+      if (coverageFile?.functionsPct !== undefined && coverageFile.functionsPct < 70) {
+        findings.push({
+          id: `${project.id}:low-function-coverage:${rel}`,
+          kind: 'missing-coverage',
+          severity: 'warning',
+          message: `Low function coverage: ${coverageFile.functionsPct}%.`,
+          filePath: sourceFile
+        });
+      }
+      let score = scoreRisk(
+        profile.criticality,
+        relatedTests.length,
+        coverageFile?.linesPct,
+        coverageFile?.branchesPct,
+        coverageFile?.functionsPct,
+        Boolean(projectCoverage),
+        findings.length,
+      );
       if (profile.signals.includes('mostly static/config code')) {
         score = Math.min(score, 55);
+      }
+      if (
+        profile.signals.includes('mostly template/render code') &&
+        relatedTests.length > 0
+      ) {
+        score = Math.min(score, 34);
       }
       if (findings.length > 0 && score >= 35) {
         risks.push({
@@ -97,6 +131,20 @@ function findRelatedTests(filePath: string, project: TestProject, tests: TestFil
     .map((test) => test.path);
 }
 
+function coveragePathMatchesSource(coveragePath: string, sourceRelPath: string): boolean {
+  const cov = normalizePath(coveragePath);
+  const src = normalizePath(sourceRelPath);
+  if (cov === src || cov.endsWith(`/${src}`)) return true;
+
+  const covStem = stripKnownExtension(cov);
+  const srcStem = stripKnownExtension(src);
+  return covStem === srcStem || covStem === `out/${srcStem}` || covStem.endsWith(`/out/${srcStem}`);
+}
+
+function stripKnownExtension(filePath: string): string {
+  return filePath.replace(/\.(tsx|ts|jsx|js|mjs|cjs|py|dart)$/, '');
+}
+
 function relatedFeatureDirsMatch(project: TestProject, sourceDir: string, testDir: string): boolean {
   const sourceFeature = featureParts(project, sourceDir, 'source');
   const testFeature = featureParts(project, testDir, 'test');
@@ -118,7 +166,7 @@ function featureParts(project: TestProject, dir: string, kind: 'source' | 'test'
     if (project.framework === 'flutter' && parts[0] === 'lib') {
       return parts.slice(1);
     }
-    if ((project.framework === 'react' || project.framework === 'firebase-functions') && parts[0] === 'src') {
+    if ((project.framework === 'node' || project.framework === 'react' || project.framework === 'firebase-functions') && parts[0] === 'src') {
       return parts.slice(1);
     }
   }
@@ -132,71 +180,6 @@ function featureParts(project: TestProject, dir: string, kind: 'source' | 'test'
     }
   }
   return parts;
-}
-
-async function buildImportMap(project: TestProject, tests: TestFile[]): Promise<Map<string, string[]>> {
-  const map = new Map<string, string[]>();
-  for (const test of tests.filter((item) => item.projectId === project.id)) {
-    const text = await fs.readFile(test.path, 'utf8').catch(() => '');
-    for (const specifier of importSpecifiers(text)) {
-      const resolved = await resolveImport(project, test.path, specifier);
-      if (!resolved) {
-        continue;
-      }
-      const existing = map.get(resolved) ?? [];
-      existing.push(test.path);
-      map.set(resolved, existing);
-    }
-  }
-  return map;
-}
-
-function importSpecifiers(text: string): string[] {
-  const specifiers: string[] = [];
-  const patterns = [
-    /\bimport\s+(?:[^'"]+\s+from\s+)?['"]([^'"]+)['"]/g,
-    /\brequire\s*\(\s*['"]([^'"]+)['"]\s*\)/g
-  ];
-  for (const pattern of patterns) {
-    let match: RegExpExecArray | null;
-    while ((match = pattern.exec(text))) {
-      if (match[1].startsWith('.') || match[1].startsWith('@/')) {
-        specifiers.push(match[1]);
-      }
-    }
-  }
-  return specifiers;
-}
-
-async function resolveImport(project: TestProject, fromFile: string, specifier: string): Promise<string | null> {
-  const base =
-    specifier.startsWith('@/')
-      ? path.join(project.rootPath, 'src', specifier.slice(2))
-      : path.resolve(path.dirname(fromFile), specifier);
-  const candidates = [
-    base,
-    `${base}.ts`,
-    `${base}.tsx`,
-    `${base}.js`,
-    `${base}.jsx`,
-    `${base}.py`,
-    `${base}.dart`,
-    path.join(base, 'index.ts'),
-    path.join(base, 'index.tsx'),
-    path.join(base, 'index.js'),
-    path.join(base, 'index.jsx')
-  ];
-  for (const candidate of candidates) {
-    try {
-      const stat = await fs.stat(candidate);
-      if (stat.isFile() && isSourceFile(candidate)) {
-        return candidate;
-      }
-    } catch {
-      // try next candidate
-    }
-  }
-  return null;
 }
 
 function profileSource(project: TestProject, relPath: string, text: string): { criticality: number; signals: string[] } {
@@ -236,6 +219,12 @@ function profileSource(project: TestProject, relPath: string, text: string): { c
       signals.push('mostly static/config code');
     }
   }
+  if (isTemplateRenderPath(relPath, text)) {
+    criticality = Math.min(criticality, 35);
+    if (!signals.includes('mostly template/render code')) {
+      signals.push('mostly template/render code');
+    }
+  }
 
   return { criticality: Math.min(100, criticality), signals: [...new Set(signals)] };
 }
@@ -250,10 +239,19 @@ function isLowBehaviorPath(relPath: string, text: string): boolean {
   return false;
 }
 
+function isTemplateRenderPath(relPath: string, text: string): boolean {
+  if (!/^src\/views\/.+\/template(?:\/.+)?\.(ts|tsx|js|jsx)$/.test(relPath)) {
+    return false;
+  }
+  return !/\b(fetch|axios|https?\.request|execFile|spawn|writeFile|unlink|rename|createOutputChannel)\b/i.test(text);
+}
+
 function scoreRisk(
   criticality: number,
   relatedTests: number,
   linesPct: number | undefined,
+  branchesPct: number | undefined,
+  functionsPct: number | undefined,
   hasCoverageReport: boolean,
   findingCount: number
 ): number {
@@ -268,6 +266,12 @@ function scoreRisk(
   } else if (linesPct !== undefined && linesPct < 80) {
     score += 12;
   }
+  if (branchesPct !== undefined && branchesPct < 70) {
+    score += 18;
+  }
+  if (functionsPct !== undefined && functionsPct < 70) {
+    score += 12;
+  }
   score += Math.min(10, findingCount * 3);
   return Math.min(100, score);
 }
@@ -280,35 +284,4 @@ function recommendation(signals: string[], relatedTests: number, linesPct: numbe
     return 'Expand tests to cover branches, error states, and user-visible outcomes.';
   }
   return 'Review related tests for meaningful assertions and edge cases.';
-}
-
-function isRelevantSource(project: TestProject, filePath: string): boolean {
-  const rel = normalizePath(path.relative(project.rootPath, filePath));
-  if (
-    /(\.d\.ts|setupTests?\.(js|ts)|testHelpers?\.(js|ts)|mock|fixture|stories\.|\.g\.dart|\.freezed\.dart|\.gr\.dart|\.mocks\.dart)$/.test(rel)
-  ) {
-    return false;
-  }
-  if (/^(coverage|dist|build|out|node_modules|\.next|\.turbo|public|storybook)\//.test(rel)) {
-    return false;
-  }
-  if (project.framework === 'react' || project.framework === 'firebase-functions') {
-    if (/^src\/(assets|img|images|icons|styles|fonts)\//.test(rel)) {
-      return false;
-    }
-    return /^(src|app|pages|components|lib|functions\/src)\//.test(rel);
-  }
-  if (project.framework === 'flutter') {
-    if (
-      /(^|\/)(generated|gen|l10n\/generated)\//.test(rel) ||
-      /(^|\/)(app_localizations(?:_[a-z_]+)?|firebase_options|generated_plugin_registrant)\.dart$/.test(rel)
-    ) {
-      return false;
-    }
-    return /^lib\//.test(rel);
-  }
-  if (project.framework === 'django' || project.framework === 'fastapi') {
-    return !/^tests?\//.test(rel) && !/(^|\/)(migrations)\//.test(rel);
-  }
-  return true;
 }

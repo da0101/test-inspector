@@ -4,9 +4,9 @@
 > 30-second orientation: what we're building, why, and where we stand.
 > Replace entirely when the active feature changes. Keep ≤60 lines.
 
-**Feature:** detective-redesign — strip Test Inspector to a detective that names what works / what doesn't / what to fix in plain English
-**Status:** planning · audit in progress (4 parallel Explore agents)
-**Stream file:** `work/detective-redesign.md`
+**Feature:** branch-worktree-feature-targeting — Test Inspector tracked-repo/worktree catalog plus feature-scoped test intelligence
+**Status:** in-progress · v1 implemented; automated tests pass; manual VS Code Extension Host QA still needed
+**Stream file:** `work/branch-worktree-feature-targeting.md`
 
 ---
 
@@ -50,9 +50,11 @@ See `work/ACTIVE.md` for stream status (currently empty).
 > Prefer `.platform/domains/<name>.md` files (cross-layer, focused) over repo-wide files.
 
 - `.platform/domains/dashboard.md` — load when touching the dashboard webview / panels
+- `.platform/domains/workspace-scope.md` — load when touching branch/worktree detection or feature-scoped filtering
 - `.platform/domains/investigation.md` — load when touching the investigator pipeline / drilldown
 - `.platform/domains/quality.md` — load when touching weak-test heuristics
 - `.platform/domains/risk-scoring.md` — load when touching criticality / risk signals
+- `.platform/domains/changed-files.md` — load when touching Git diff / changed-file targeting
 - `.platform/STATUS.md` — current priorities + release blocklist
 - `.platform/memory/decisions.md` — locked architectural / product / tooling decisions (esp. #11 product thesis)
 - `ROADMAP.md` (repo root) — § "Definition Of Actually Useful" is the target output shape

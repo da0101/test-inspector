@@ -1,4 +1,4 @@
-export type FrameworkId = 'react' | 'flutter' | 'django' | 'fastapi' | 'firebase-functions';
+export type FrameworkId = 'node' | 'react' | 'flutter' | 'django' | 'fastapi' | 'firebase-functions';
 
 export type TestStatus = 'unknown' | 'passed' | 'failed' | 'skipped' | 'mixed';
 
@@ -184,4 +184,36 @@ export type TestInspectorReport = {
   coverage: CoverageSummary[];
   qualityFindings: QualityFinding[];
   changedFiles: ChangedFileRisk[];
+};
+
+export type CatalogSource = 'tracked' | 'workspace' | 'agentboard';
+
+export type WorktreeSummary = {
+  id: string;
+  repoPath: string;
+  path: string;
+  branch: string;
+  isMain: boolean;
+  source: CatalogSource;
+};
+
+export type RepositorySummary = {
+  id: string;
+  name: string;
+  path: string;
+  source: CatalogSource;
+  worktrees: WorktreeSummary[];
+  diagnostics: string[];
+};
+
+export type FeatureScope =
+  | { kind: 'all'; label: 'All features' }
+  | { kind: 'query'; label: string; query: string };
+
+export type CaseFileScopeSummary = {
+  repoName?: string;
+  repoPath?: string;
+  worktreePath?: string;
+  branch?: string;
+  featureLabel?: string;
 };

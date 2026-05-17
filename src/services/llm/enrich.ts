@@ -47,6 +47,9 @@ export function buildUserPrompt(opts: {
   const signalLines = opts.caseFile.evidence.signals
     .map((s) => `- ${s.name} (weight ${s.weight}): ${s.detail ?? 'no detail'}${s.location ? ` @ line ${s.location.line ?? '?'}` : ''}`)
     .join('\n');
+  const gapLines = (opts.caseFile.evidence.gaps ?? [])
+    .map((gap) => `- ${gap.severity}: ${gap.title} — ${gap.reason} Suggested test: ${gap.suggestedTest}`)
+    .join('\n');
 
   const related = (opts.relatedContent ?? []).map((r) =>
     `\n--- RELATED ${r.path} ---\n${truncate(numberLines(r.content), 6000)}\n--- END ---`,
@@ -58,6 +61,9 @@ export function buildUserPrompt(opts: {
     ``,
     `DETERMINISTIC SIGNALS:`,
     signalLines || '(none)',
+    ``,
+    `DETERMINISTIC TEST GAPS:`,
+    gapLines || '(none)',
     ``,
     `--- TARGET FILE: ${opts.caseFile.target.path} ---`,
     truncate(numbered, 10000),

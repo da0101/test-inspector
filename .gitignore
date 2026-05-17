@@ -2,6 +2,8 @@ node_modules/
 out/
 .vscode-test/
 test-inspector-report.md
+test-inspector-deterministic-report.md
+test-inspector-ai-report.md
 coverage/
 *.vsix
 

@@ -24,6 +24,23 @@ test('heuristics · vague-title fires on Copilot-style "works" / "renders" / "te
   assert.match(signal.detail ?? '', /3 of 4/);
 });
 
+test('heuristics · vague-title reports empty names, location, and overflow examples', () => {
+  const cases = [
+    { id: '1', name: '   ', filePath: '/x/a.test.ts', line: 7, status: 'unknown' as const },
+    { id: '2', name: 'should have default values', filePath: '/x/a.test.ts', status: 'unknown' as const },
+    { id: '3', name: 'should create state with custom values', filePath: '/x/a.test.ts', status: 'unknown' as const },
+    { id: '4', name: 'returns true', filePath: '/x/a.test.ts', status: 'unknown' as const },
+    { id: '5', name: 'rejects checkout when payment token is missing', filePath: '/x/a.test.ts', status: 'unknown' as const },
+  ];
+
+  const signal = detectVagueTitles(cases);
+
+  assert.ok(signal);
+  assert.equal(signal.location?.line, 7);
+  assert.match(signal.detail ?? '', /and 1 more/);
+  assert.equal(signal.weight, 30);
+});
+
 test('heuristics · vague-title is silent when every title is specific', () => {
   const cases = [
     {
@@ -40,6 +57,16 @@ test('heuristics · vague-title is silent when every title is specific', () => {
     },
   ];
   assert.equal(detectVagueTitles(cases), null);
+});
+
+test('heuristics · vague-title flags short render titles but allows outcome-specific render titles', () => {
+  const signal = detectVagueTitles([
+    { id: '1', name: 'renders dashboard', filePath: '/x', status: 'unknown' as const },
+    { id: '2', name: 'renders alert when api returns 500', filePath: '/x', status: 'unknown' as const },
+  ]);
+
+  assert.ok(signal);
+  assert.match(signal.detail ?? '', /1 of 2/);
 });
 
 test('heuristics · mock-only-assertions fires when verify(...) is the only assertion', () => {
@@ -74,10 +101,24 @@ test('heuristics · mocks-unit-under-test fires when jest.mock targets the file 
   assert.match(signal.detail ?? '', /Login/);
 });
 
+test('heuristics · mocks-unit-under-test fires for vi.mock and Dart test naming', () => {
+  const signal = detectMocksUnitUnderTest(
+    '/repo/lib/auth/session_manager_test.dart',
+    "vi.mock('../auth/session_manager.ts');\ntest('rejects stale sessions', () => {});"
+  );
+
+  assert.ok(signal);
+  assert.match(signal.detail ?? '', /session_manager/);
+});
+
 test('heuristics · mocks-unit-under-test fires on @patch with the same module name (Python)', () => {
   const content = `from myapp.views import View\n@patch('myapp.views.View')\ndef test_view(mock_view): pass`;
   const signal = detectMocksUnitUnderTest('/repo/myapp/tests/test_views.py', content);
   assert.ok(signal);
+});
+
+test('heuristics · mocks-unit-under-test is silent for helper files with no unit suffix', () => {
+  assert.equal(detectMocksUnitUnderTest('/repo/test/support/helpers.ts', "jest.mock('./helpers');"), null);
 });
 
 test('heuristics · mocks-unit-under-test is silent when collaborators are mocked but not the unit', () => {

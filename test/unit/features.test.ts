@@ -93,3 +93,236 @@ test('detects Firebase Functions feature areas under src folders', async () => {
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test('ignores low-behavior template style files when ranking source risks', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'test-inspector-node-style-risk-'));
+  try {
+    await mkdir(path.join(root, 'src', 'views', 'caseFile', 'template'), { recursive: true });
+    await mkdir(path.join(root, 'src', 'services'), { recursive: true });
+    await writeFile(
+      path.join(root, 'src', 'views', 'caseFile', 'template', 'style.ts'),
+      "export const STYLE = `.btn { color: var(--vscode-foreground); }`;\n"
+    );
+    await writeFile(
+      path.join(root, 'src', 'services', 'reportController.ts'),
+      "export async function generateReport() { if (true) return fetch('/api/report'); }\n"
+    );
+
+    const project = { id: `node:${root}`, rootPath: root, framework: 'node' as const, label: 'Node.js project', configFiles: [] };
+    const risks = await analyzeSourceRisks([project], [], []);
+
+    assert.deepEqual(
+      risks.map((risk) => path.relative(root, risk.path)),
+      ['src/services/reportController.ts']
+    );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test('deprioritizes high-line-coverage template render helpers with related tests', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'test-inspector-template-risk-'));
+  try {
+    await mkdir(path.join(root, 'src', 'views', 'caseFile', 'template'), { recursive: true });
+    await mkdir(path.join(root, 'test', 'unit'), { recursive: true });
+    const sourcePath = path.join(root, 'src', 'views', 'caseFile', 'template', 'render.ts');
+    const testPath = path.join(root, 'test', 'unit', 'render.test.ts');
+    await writeFile(
+      sourcePath,
+      "export function render(state: 'ready' | 'error') { return state === 'ready' ? '<button>Open</button>' : '<p role=\"alert\">Error</p>'; }\n",
+    );
+    await writeFile(
+      testPath,
+      "import { render } from '../../src/views/caseFile/template/render';\ntest('renders ready state', () => { render('ready'); });\n",
+    );
+
+    const project = { id: `node:${root}`, rootPath: root, framework: 'node' as const, label: 'Node.js project', configFiles: [] };
+    const risks = await analyzeSourceRisks(
+      [project],
+      [{ path: testPath, projectId: project.id, status: 'unknown', testCases: [], qualityFindings: [] }],
+      [{
+        projectId: project.id,
+        files: [{ path: 'out/src/views/caseFile/template/render.js', linesPct: 95, branchesPct: 45, functionsPct: 100 }],
+        totals: { linesPct: 95, branchesPct: 45, functionsPct: 100 },
+      }],
+    );
+
+    assert.equal(risks.length, 0);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test('deprioritizes high-line-coverage view template entry files with related tests', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'test-inspector-view-template-risk-'));
+  try {
+    await mkdir(path.join(root, 'src', 'views', 'reports'), { recursive: true });
+    await mkdir(path.join(root, 'test', 'unit'), { recursive: true });
+    const sourcePath = path.join(root, 'src', 'views', 'reports', 'template.ts');
+    const testPath = path.join(root, 'test', 'unit', 'reportsTemplate.test.ts');
+    await writeFile(
+      sourcePath,
+      "export function renderReports(mode: 'ai' | 'deterministic') { return mode === 'ai' ? '<button>AI</button>' : '<button>Deterministic</button>'; }\n",
+    );
+    await writeFile(
+      testPath,
+      "import { renderReports } from '../../src/views/reports/template';\ntest('renders deterministic mode', () => { renderReports('deterministic'); });\n",
+    );
+
+    const project = { id: `node:${root}`, rootPath: root, framework: 'node' as const, label: 'Node.js project', configFiles: [] };
+    const risks = await analyzeSourceRisks(
+      [project],
+      [{ path: testPath, projectId: project.id, status: 'unknown', testCases: [], qualityFindings: [] }],
+      [{
+        projectId: project.id,
+        files: [{ path: 'out/src/views/reports/template.js', linesPct: 99, branchesPct: 45, functionsPct: 100 }],
+        totals: { linesPct: 99, branchesPct: 45, functionsPct: 100 },
+      }],
+    );
+
+    assert.equal(risks.length, 0);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test('treats barrel-imported source files as indirectly related to tests', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'test-inspector-barrel-risk-'));
+  try {
+    await mkdir(path.join(root, 'src', 'adapters'), { recursive: true });
+    await mkdir(path.join(root, 'src', 'services'), { recursive: true });
+    await mkdir(path.join(root, 'test', 'unit'), { recursive: true });
+    await writeFile(
+      path.join(root, 'src', 'adapters', 'react.ts'),
+      "export class ReactAdapter { async detectProjects() { if (true) return ['react']; } }\n"
+    );
+    await writeFile(
+      path.join(root, 'src', 'adapters', 'index.ts'),
+      "import { ReactAdapter } from './react';\nexport function createAdapters() { return [new ReactAdapter()]; }\n"
+    );
+    await writeFile(
+      path.join(root, 'src', 'services', 'reportController.ts'),
+      "export async function generateReport() { if (true) return fetch('/api/report'); }\n"
+    );
+    const testPath = path.join(root, 'test', 'unit', 'adapters.test.ts');
+    await writeFile(
+      testPath,
+      "import assert from 'node:assert/strict';\nimport { createAdapters } from '../../src/adapters';\ntest('creates adapters', () => { assert.equal(createAdapters().length, 1); });\n"
+    );
+
+    const project = { id: `node:${root}`, rootPath: root, framework: 'node' as const, label: 'Node.js project', configFiles: [] };
+    const risks = await analyzeSourceRisks(
+      [project],
+      [{ path: testPath, projectId: project.id, status: 'unknown', testCases: [], qualityFindings: [] }],
+      []
+    );
+
+    assert.deepEqual(
+      risks.map((risk) => path.relative(root, risk.path)),
+      ['src/services/reportController.ts']
+    );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test('flags critical source risk when line coverage is fine but branch coverage is low', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'test-inspector-branch-risk-'));
+  try {
+    await mkdir(path.join(root, 'src', 'services'), { recursive: true });
+    await mkdir(path.join(root, 'test', 'unit'), { recursive: true });
+    const sourcePath = path.join(root, 'src', 'services', 'uploadController.ts');
+    const testPath = path.join(root, 'test', 'unit', 'uploadController.test.ts');
+    await writeFile(
+      sourcePath,
+      "export async function upload(file?: File) { if (!file) return { ok: false }; return fetch('/api/upload'); }\n",
+    );
+    await writeFile(
+      testPath,
+      "import { upload } from '../../src/services/uploadController';\ntest('uploads file', async () => { await upload({} as File); });\n",
+    );
+
+    const project = { id: `node:${root}`, rootPath: root, framework: 'node' as const, label: 'Node.js project', configFiles: [] };
+    const risks = await analyzeSourceRisks(
+      [project],
+      [{ path: testPath, projectId: project.id, status: 'unknown', testCases: [], qualityFindings: [] }],
+      [{
+        projectId: project.id,
+        files: [{ path: 'out/src/services/uploadController.js', linesPct: 82, branchesPct: 40, functionsPct: 100 }],
+        totals: { linesPct: 82, branchesPct: 40, functionsPct: 100 },
+      }],
+    );
+
+    assert.equal(risks.length, 1);
+    assert.ok(risks[0]!.findings.some((finding) => finding.message.includes('Low branch coverage')));
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test('builds feature areas for node/react/python roots and ignores test-only buckets', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'test-inspector-feature-branches-'));
+  try {
+    const reactRoot = path.join(root, 'react');
+    const nodeRoot = path.join(root, 'node');
+    const pythonRoot = path.join(root, 'api');
+    await mkdir(path.join(reactRoot, 'src', 'js', 'billing'), { recursive: true });
+    await mkdir(path.join(reactRoot, 'pages', 'home'), { recursive: true });
+    await mkdir(path.join(nodeRoot, 'src', 'orders'), { recursive: true });
+    await mkdir(path.join(pythonRoot, 'app'), { recursive: true });
+    await mkdir(path.join(pythonRoot, 'tests'), { recursive: true });
+    await writeFile(path.join(reactRoot, 'src', 'js', 'billing', 'Invoice.tsx'), 'export function Invoice() { return null; }\n');
+    await writeFile(path.join(reactRoot, 'pages', 'home', 'Index.tsx'), 'export function Home() { return null; }\n');
+    await writeFile(path.join(nodeRoot, 'src', 'orders', 'create.ts'), 'export function create() { return 1; }\n');
+    await writeFile(path.join(pythonRoot, 'app', 'main.py'), 'def main(): return 1\n');
+    await writeFile(path.join(pythonRoot, 'tests', 'test_main.py'), 'def test_main(): assert True\n');
+
+    const projects = [
+      { id: `react:${reactRoot}`, rootPath: reactRoot, framework: 'react' as const, label: 'React app', configFiles: [] },
+      { id: `node:${nodeRoot}`, rootPath: nodeRoot, framework: 'node' as const, label: 'Node app', configFiles: [] },
+      { id: `fastapi:${pythonRoot}`, rootPath: pythonRoot, framework: 'fastapi' as const, label: 'FastAPI app', configFiles: [], testCommand: 'pytest' },
+    ];
+
+    const areas = await analyzeFeatureAreas(projects, [], [], []);
+
+    assert.deepEqual(new Set(areas.map((area) => area.label)), new Set(['js / billing', 'pages / home', 'src / orders', 'app']));
+    assert.equal(areas.some((area) => area.label === 'tests'), false);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test('feature areas include related risk tests, coverage average, and framework commands', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'test-inspector-feature-risk-'));
+  try {
+    await mkdir(path.join(root, 'lib', 'auth'), { recursive: true });
+    await mkdir(path.join(root, 'test', 'auth'), { recursive: true });
+    const sourcePath = path.join(root, 'lib', 'auth', 'login.dart');
+    const testPath = path.join(root, 'test', 'auth', 'login_test.dart');
+    await writeFile(sourcePath, 'Future<void> login() async {}\n');
+    await writeFile(testPath, "void main() {}\n");
+
+    const project = { id: `flutter:${root}`, rootPath: root, framework: 'flutter' as const, label: 'Flutter app', configFiles: [], testCommand: 'flutter test' };
+    const areas = await analyzeFeatureAreas(
+      [project],
+      [{ path: testPath, projectId: project.id, status: 'unknown', testCases: [], qualityFindings: [] }],
+      [{ projectId: project.id, files: [{ path: 'lib/auth/login.dart', linesPct: 75 }], totals: { linesPct: 75 } }],
+      [{
+        path: sourcePath,
+        projectId: project.id,
+        score: 80,
+        criticality: 80,
+        signals: ['async/error handling'],
+        relatedTests: [testPath],
+        findings: [],
+        recommendation: 'Add auth tests.',
+      }],
+    );
+
+    assert.equal(areas[0]!.averageCoverage, 75);
+    assert.equal(areas[0]!.riskScore, 80);
+    assert.equal(areas[0]!.recommendedCommand, 'flutter test test/auth/login_test.dart');
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
