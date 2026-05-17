@@ -5,6 +5,7 @@ One line per completed task. Newest at the top. Append-only.
 Format: `YYYY-MM-DD — <task> — <outcome> — <takeaway>`
 
 ---
+- 2026-05-17 — commit `c97950a`: Add reliable reviewer report and coverage workflow — auto-logged
 - 2026-05-16 — commit `bee7420`: docs: comprehensive README + MIT LICENSE — auto-logged
 - 2026-05-16 — commit `1ffaee4`: Close detective-redesign stream — auto-logged
 - 2026-05-16 — commit `6c50138`: v1.0.0 — official release: deterministic detective + LLM-grounded second opinion — auto-logged

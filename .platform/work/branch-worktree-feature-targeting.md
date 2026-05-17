@@ -117,14 +117,16 @@ Make Test Inspector a reliable local-first test reviewer: deterministic findings
 ## Resume state
 _Overwritten by `ab checkpoint` — the compact payload the next agent reads first. Keep this block under ~10 lines._
 
-- **Last updated:** 2026-05-17 by danilulmashev
-- **What just happened:** Added release-ready reviewer plan to the stream, executed calibration pass 3, hardened report/target/catalog/runner/fs tests, regenerated dogfood deterministic report at 66 cases with 33 Weak and 33 Strong, verified npm test 143/143 and npm run coverage, then reinstalled the VSIX.
+- **Last updated:** 2026-05-17 by danilulmashev (auto)
+- **What just happened:** (auto) c97950a: Add reliable reviewer report and coverage workflow
 - **Current focus:** —
-- **Next action:** Manual Extension Host QA on two real repos and branch-coverage decision/improvement remain before release-ready signoff.
+- **Next action:** (auto-saved from commit — update next action manually)
 - **Blockers:** none
 
 ## Progress log
 _Append-only. `ab checkpoint` prepends a dated line and auto-trims to the last 10 entries. Format: `YYYY-MM-DD HH:MM — <what happened>`._
+
+2026-05-17 10:19 — (auto) c97950a: Add reliable reviewer report and coverage workflow
 
 2026-05-17 09:32 — Added release-ready reviewer plan to the stream, executed calibration pass 3, hardened report/target/catalog/runner/fs tests, regenerated dogfood deterministic report at 66 cases with 33 Weak and 33 Strong, verified npm test 143/143 and npm run coverage, then reinstalled the VSIX.
 
@@ -143,8 +145,6 @@ _Append-only. `ab checkpoint` prepends a dated line and auto-trims to the last 1
 2026-05-17 07:38 — Completed runtime coverage layer and dogfooding: added Generate Coverage command, Reports sidebar coverage metric/button, coverage report tables, current-file test running, weighted LCOV totals, and a repo-local npm coverage script emitting coverage/lcov.info. npm test passes 107/107; npm run coverage succeeds; self-scan reads 78.1% line, 65% branch, 68.8% function coverage with 29 Strong and no Missing/Weak/Theater; VSIX reinstalled.
 
 2026-05-17 07:36 — Added runtime coverage generation and current-file test running: Reports sidebar now shows line coverage and Generate Coverage, coverage commands are previewed and run only when explicitly configured, parsed reports include line/branch/function/statement coverage, Node current-file runs avoid Jest-only flags. npm test passes 107/107; dogfood self-scan is 29 Strong, 0 Missing/Weak/Theater; VSIX reinstalled.
-
-2026-05-16 23:39 — Fixed Reports mode selection highlight, added missing critical behavior tests across report/AI controllers, templates, tree views, panels, state, tracked repos, and extension activation. Dogfood self-scan now reports 28 Strong, 0 Missing, 0 Weak, 0 Theater. Reinstalled updated VSIX.
 
 ## Open questions
 _Things blocked on user input. Remove when resolved._
