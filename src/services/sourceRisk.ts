@@ -28,7 +28,7 @@ export async function analyzeSourceRisks(
       const rel = normalizePath(path.relative(project.rootPath, sourceFile));
       const text = await fs.readFile(sourceFile, 'utf8').catch(() => '');
       const profile = profileSource(project, rel, text);
-      const coverageFile = projectCoverage?.files.find((file) => file.path === rel || file.path.endsWith(`/${rel}`));
+      const coverageFile = projectCoverage?.files.find((file) => coveragePathMatchesSource(file.path, rel));
       const findings: QualityFinding[] = [];
       if (relatedTests.length === 0) {
         findings.push({
@@ -57,9 +57,41 @@ export async function analyzeSourceRisks(
           filePath: sourceFile
         });
       }
-      let score = scoreRisk(profile.criticality, relatedTests.length, coverageFile?.linesPct, Boolean(projectCoverage), findings.length);
+      if (coverageFile?.branchesPct !== undefined && coverageFile.branchesPct < 70) {
+        findings.push({
+          id: `${project.id}:low-branch-coverage:${rel}`,
+          kind: 'missing-coverage',
+          severity: 'warning',
+          message: `Low branch coverage: ${coverageFile.branchesPct}%.`,
+          filePath: sourceFile
+        });
+      }
+      if (coverageFile?.functionsPct !== undefined && coverageFile.functionsPct < 70) {
+        findings.push({
+          id: `${project.id}:low-function-coverage:${rel}`,
+          kind: 'missing-coverage',
+          severity: 'warning',
+          message: `Low function coverage: ${coverageFile.functionsPct}%.`,
+          filePath: sourceFile
+        });
+      }
+      let score = scoreRisk(
+        profile.criticality,
+        relatedTests.length,
+        coverageFile?.linesPct,
+        coverageFile?.branchesPct,
+        coverageFile?.functionsPct,
+        Boolean(projectCoverage),
+        findings.length,
+      );
       if (profile.signals.includes('mostly static/config code')) {
         score = Math.min(score, 55);
+      }
+      if (
+        profile.signals.includes('mostly template/render code') &&
+        relatedTests.length > 0
+      ) {
+        score = Math.min(score, 34);
       }
       if (findings.length > 0 && score >= 35) {
         risks.push({
@@ -97,6 +129,20 @@ function findRelatedTests(filePath: string, project: TestProject, tests: TestFil
       );
     })
     .map((test) => test.path);
+}
+
+function coveragePathMatchesSource(coveragePath: string, sourceRelPath: string): boolean {
+  const cov = normalizePath(coveragePath);
+  const src = normalizePath(sourceRelPath);
+  if (cov === src || cov.endsWith(`/${src}`)) return true;
+
+  const covStem = stripKnownExtension(cov);
+  const srcStem = stripKnownExtension(src);
+  return covStem === srcStem || covStem === `out/${srcStem}` || covStem.endsWith(`/out/${srcStem}`);
+}
+
+function stripKnownExtension(filePath: string): string {
+  return filePath.replace(/\.(tsx|ts|jsx|js|mjs|cjs|py|dart)$/, '');
 }
 
 function relatedFeatureDirsMatch(project: TestProject, sourceDir: string, testDir: string): boolean {
@@ -173,6 +219,12 @@ function profileSource(project: TestProject, relPath: string, text: string): { c
       signals.push('mostly static/config code');
     }
   }
+  if (isTemplateRenderPath(relPath, text)) {
+    criticality = Math.min(criticality, 35);
+    if (!signals.includes('mostly template/render code')) {
+      signals.push('mostly template/render code');
+    }
+  }
 
   return { criticality: Math.min(100, criticality), signals: [...new Set(signals)] };
 }
@@ -187,10 +239,19 @@ function isLowBehaviorPath(relPath: string, text: string): boolean {
   return false;
 }
 
+function isTemplateRenderPath(relPath: string, text: string): boolean {
+  if (!/^src\/views\/.+\/template(?:\/.+)?\.(ts|tsx|js|jsx)$/.test(relPath)) {
+    return false;
+  }
+  return !/\b(fetch|axios|https?\.request|execFile|spawn|writeFile|unlink|rename|createOutputChannel)\b/i.test(text);
+}
+
 function scoreRisk(
   criticality: number,
   relatedTests: number,
   linesPct: number | undefined,
+  branchesPct: number | undefined,
+  functionsPct: number | undefined,
   hasCoverageReport: boolean,
   findingCount: number
 ): number {
@@ -203,6 +264,12 @@ function scoreRisk(
   } else if (linesPct !== undefined && linesPct < 50) {
     score += 30;
   } else if (linesPct !== undefined && linesPct < 80) {
+    score += 12;
+  }
+  if (branchesPct !== undefined && branchesPct < 70) {
+    score += 18;
+  }
+  if (functionsPct !== undefined && functionsPct < 70) {
     score += 12;
   }
   score += Math.min(10, findingCount * 3);

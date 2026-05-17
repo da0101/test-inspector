@@ -78,6 +78,35 @@ test('exportMarkdown · renders evidence signals under each case when present', 
   assert.match(md, /vague-title.*weight 8.*1 vague title/);
 });
 
+test('exportMarkdown · renders deterministic suggested test gaps', () => {
+  const bundle = emptyBundle();
+  bundle.cases = [
+    makeCase({
+      target: { kind: 'source', path: '/repo/upload.ts', projectId: 'p1' },
+      verdict: 'MISSING',
+      killPriority: 90,
+      evidence: {
+        signals: [],
+        relatedTests: [],
+        gaps: [
+          {
+            title: 'upload.ts: failure path needs a test',
+            severity: 'critical',
+            reason: 'Async/API code needs failure coverage.',
+            evidence: ['0% branch coverage'],
+            suggestedTest: 'Simulate a rejected OCR provider and assert no partial write.',
+          },
+        ],
+      },
+    }),
+  ];
+
+  const md = exportCaseFileAsMarkdown(bundle);
+  assert.match(md, /Suggested test gaps/);
+  assert.match(md, /upload\.ts: failure path needs a test/);
+  assert.match(md, /Simulate a rejected OCR provider/);
+});
+
 test('exportMarkdown · filters selected report groups', () => {
   const bundle = emptyBundle();
   bundle.cases = [
@@ -116,4 +145,19 @@ test('exportMarkdown · renders AI report suggestions without changing determini
   assert.match(md, /AI review:/);
   assert.match(md, /Add a PDF upload error-path test/);
   assert.match(md, /Line 7: critical path has no test/);
+});
+
+test('exportMarkdown · renders runtime pass count and coverage summary', () => {
+  const bundle = emptyBundle();
+  bundle.runtime = { testCases: 107, passed: 107, failed: 0, generatedAt: 1, command: 'npm run coverage' };
+  bundle.coverage = [{ projectId: 'p1', files: [{ path: 'src/a.ts', linesPct: 80 }], totals: { linesPct: 78.1, branchesPct: 65, functionsPct: 68.8 } }];
+  bundle.projects = [{ id: 'p1', rootPath: '/repo', framework: 'node', label: 'Node repo', configFiles: [] }];
+
+  const md = exportCaseFileAsMarkdown(bundle);
+
+  assert.match(md, /Runtime test result:\*\* 107\/107 passing/);
+  assert.match(md, /Average line coverage:\*\* 78\.1%/);
+  assert.match(md, /Average branch coverage:\*\* 65%/);
+  assert.match(md, /Average function coverage:\*\* 68\.8%/);
+  assert.match(md, /\| Node repo \| 78\.1% \| 65% \| 68\.8% \| unknown \| 1 \|/);
 });

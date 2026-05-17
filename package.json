@@ -37,6 +37,7 @@
     "onCommand:testInspector.openDashboard",
     "onCommand:testInspector.configureLlm",
     "onCommand:testInspector.runCurrentFile",
+    "onCommand:testInspector.generateCoverage",
     "onCommand:testInspector.generateReport"
   ],
   "main": "./out/src/extension.js",
@@ -144,6 +145,11 @@
         "icon": "$(run)"
       },
       {
+        "command": "testInspector.generateCoverage",
+        "title": "Test Inspector: Generate Coverage",
+        "icon": "$(pulse)"
+      },
+      {
         "command": "testInspector.generateReport",
         "title": "Test Inspector: Generate Report",
         "icon": "$(file-text)"
@@ -182,9 +188,14 @@
           "group": "navigation@3"
         },
         {
-          "command": "testInspector.configureLlm",
+          "command": "testInspector.generateCoverage",
           "when": "view == testInspector.cases",
           "group": "navigation@4"
+        },
+        {
+          "command": "testInspector.configureLlm",
+          "when": "view == testInspector.cases",
+          "group": "navigation@5"
         }
       ],
       "view/item/context": [
@@ -246,6 +257,7 @@
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "test": "npm run compile && node --test out/test/unit/*.test.js",
+    "coverage": "npm run compile && mkdir -p coverage && node --test --experimental-test-coverage --test-reporter=lcov --test-reporter-destination=coverage/lcov.info out/test/unit/*.test.js",
     "vscode:prepublish": "npm run compile"
   },
   "devDependencies": {

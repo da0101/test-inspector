@@ -8,6 +8,8 @@ type IncomingMessage = {
   type: 'generate';
   mode: CaseFileReportMode;
   verdicts: CaseVerdict[];
+} | {
+  type: 'coverage';
 };
 
 export class ReportsViewProvider implements vscode.WebviewViewProvider {
@@ -23,7 +25,8 @@ export class ReportsViewProvider implements vscode.WebviewViewProvider {
       mode: CaseFileReportMode,
       verdicts: CaseVerdict[],
       onProgress: (message: string) => void
-    ) => Promise<boolean>
+    ) => Promise<boolean>,
+    private readonly onGenerateCoverage?: (onProgress: (message: string) => void) => Promise<boolean>
   ) {}
 
   async resolveWebviewView(view: vscode.WebviewView): Promise<void> {
@@ -47,6 +50,20 @@ export class ReportsViewProvider implements vscode.WebviewViewProvider {
   }
 
   private async handleMessage(msg: IncomingMessage): Promise<void> {
+    if (msg.type === 'coverage') {
+      if (!this.onGenerateCoverage) {
+        this.setProgress('error', 'Coverage generation is not available.');
+        return;
+      }
+      this.setProgress('working', 'Preparing coverage...');
+      try {
+        const ok = await this.onGenerateCoverage((message) => this.setProgress('working', message));
+        this.setProgress(ok ? 'ok' : 'idle', ok ? 'Coverage generated. Rescanning...' : 'Coverage cancelled.');
+      } catch (err) {
+        this.setProgress('error', err instanceof Error ? err.message : String(err));
+      }
+      return;
+    }
     if (msg.type !== 'generate') return;
     if (!msg.verdicts.length) {
       this.setProgress('error', 'Choose at least one group.');

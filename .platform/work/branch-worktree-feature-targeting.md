@@ -9,7 +9,7 @@ repo_ids: [repo-primary]
 base_branch: develop
 git_branch: feature/branch-worktree-feature-targeting
 created_at: 2026-05-16
-updated_at: 2026-05-16
+updated_at: 2026-05-17
 closure_approved: false
 ---
 
@@ -63,35 +63,88 @@ _Append-only. Format: `YYYY-MM-DD — <decision> — <rationale>`_
 |---|---|---|---|---|---|---|
 | test-inspector | `/Users/danilulmashev/Documents/GitHub/test-inspector` | `feature/branch-worktree-feature-targeting` | `develop` | _TODO — install before implementation_ | `npm run watch` (extension dev) · F5 (Extension Development Host) | n/a (VS Code extension; no http server) |
 
+## Release-ready reliable reviewer plan
+
+### Goal
+Make Test Inspector a reliable local-first test reviewer: deterministic findings first, optional AI support second, with branch/worktree/feature-scoped reports that engineers can trust.
+
+### Phase 1 — Calibration Pass 3
+- [x] Add domain-specific gap suggestions for `workspaceCatalog.ts`, `runner.ts`, `utils/fs.ts`, VS Code panel/webview files, and `reportController.ts`.
+- [x] Reduce generic fallback suggestions in top findings.
+- [x] Keep service/controller risk above pure string-rendering helpers unless the helper performs commands, file I/O, secrets, or external calls.
+- [x] Regenerate the deterministic report and confirm the top 10 Weak findings are specific and actionable.
+
+### Phase 2 — Critical Test Hardening
+- [x] `reportController.ts`: deterministic success, selected groups, AI mode without provider, AI review failure, write failure.
+- [x] `targetController.ts`: add repo success/failure, refresh failure, select worktree, feature scope changes, raw bundle publish/update.
+- [x] `workspaceCatalog.ts`: invalid repo path, Git failure, malformed worktree output, duplicate repo/worktree dedupe, Agentboard child repo expansion.
+- [x] `runner.ts`: command preview, run-file args, non-zero exit, stdout/stderr capture.
+- [x] Regenerate coverage and confirm Weak count only drops because real gaps were closed.
+
+### Phase 3 — Feature-Scoped Reliability
+- [ ] Verify feature scope filters source files, test files, verdict cards, reports, and AI context.
+- [ ] Add tests for folder-based features, query-based features, monorepo duplicate feature names, and no-match feature state.
+- [ ] Confirm selected feature reports do not leak unrelated app-wide noise.
+
+### Phase 4 — Coverage Adapter Reliability
+- [ ] Add/verify fixture tests for Node `out/src/*.js -> src/*.ts`, Jest/Vitest/Istanbul-style paths, Flutter `lib/*.dart`, and Python package paths.
+- [ ] Ensure missing/unreadable coverage is surfaced as setup evidence, not silent false confidence.
+
+### Phase 5 — AI Reviewer Grounding
+- [x] Ensure AI prompt includes deterministic verdict, deterministic gaps, coverage evidence, and related tests.
+- [x] Ensure AI output can agree/challenge, cite verified anchors, suggest concrete tests, and preserve uncertainty.
+- [x] Keep AI unable to alter deterministic scores or display fabricated anchors.
+
+### Phase 6 — UI / Report Trust Pass
+- [x] Confirm dashboard metric guide and report wording distinguish test files, test cases, source files, coverage, Weak source files, and Strong test files.
+- [x] Confirm report scope shows repo/worktree/branch/feature and selected groups clearly.
+
+### Phase 7 — Manual VS Code QA
+- [ ] Open Test Inspector repo, generate coverage, refresh Case File, generate deterministic report, and ask AI reviewer on one card.
+- [ ] Open another real repo, add tracked repo, select existing worktree, select feature, refresh, and generate report.
+- [ ] Confirm no source mutation, no Git mutation, no broken commands, and persisted state survives reload.
+
+### Release gate
+- [x] `npm test` passes.
+- [x] `npm run coverage` passes.
+- [x] Dogfood deterministic report has no obvious nonsense in top findings.
+- [x] Top 10 Weak cards are specific and actionable.
+- [ ] Branch coverage is around 72-75%, or remaining branch gaps are intentionally accepted.
+- [ ] Feature-scoped reports work.
+- [x] AI review is optional, safe, and grounded.
+- [ ] Manual VS Code QA passes on at least 2 real repos.
+
 ## Resume state
 _Overwritten by `ab checkpoint` — the compact payload the next agent reads first. Keep this block under ~10 lines._
 
-- **Last updated:** 2026-05-16 by danilulmashev
-- **What just happened:** Added import-graph source-risk reliability: barrel and entrypoint imports now provide indirect related-test evidence; dogfood Missing dropped from 36 to 19 while Theater/Weak stayed 0; npm test passes 82/82.
+- **Last updated:** 2026-05-17 by danilulmashev
+- **What just happened:** Added release-ready reviewer plan to the stream, executed calibration pass 3, hardened report/target/catalog/runner/fs tests, regenerated dogfood deterministic report at 66 cases with 33 Weak and 33 Strong, verified npm test 143/143 and npm run coverage, then reinstalled the VSIX.
 - **Current focus:** —
-- **Next action:** Regenerate deterministic report in the Extension Host and review the remaining 19 Missing cards for controller/UI coverage strategy.
+- **Next action:** Manual Extension Host QA on two real repos and branch-coverage decision/improvement remain before release-ready signoff.
 - **Blockers:** none
 
 ## Progress log
 _Append-only. `ab checkpoint` prepends a dated line and auto-trims to the last 10 entries. Format: `YYYY-MM-DD HH:MM — <what happened>`._
 
-2026-05-16 23:26 — Added import-graph source-risk reliability: barrel and entrypoint imports now provide indirect related-test evidence; dogfood Missing dropped from 36 to 19 while Theater/Weak stayed 0; npm test passes 82/82.
+2026-05-17 09:32 — Added release-ready reviewer plan to the stream, executed calibration pass 3, hardened report/target/catalog/runner/fs tests, regenerated dogfood deterministic report at 66 cases with 33 Weak and 33 Strong, verified npm test 143/143 and npm run coverage, then reinstalled the VSIX.
 
-2026-05-16 23:11 — Hardened Node.js analyzer reliability after dogfooding: no fixture leakage, no string-fixture pseudo-tests, node:assert methods recognized, multiline imports handled, low-behavior source noise reduced. npm test passes 81/81.
+2026-05-17 09:06 — Ran calibration pass 2: reduced high-line template/render noise, added AI reviewer branch tests, regenerated deterministic report, verified npm test 125/125 and coverage 80.2 line / 68.2 branch / 71 function, then reinstalled VSIX.
 
-2026-05-16 22:46 — Moved report mode/group selection into a compact Reports sidebar webview and removed top-center AI report progress notifications. npm test passes 76/76.
+2026-05-17 08:56 — Ran calibration pass 1: inspected top Weak cards, added domain-specific deterministic gap suggestions, added transport-level llm/http behavior tests, verified npm test 119/119 and coverage 79.3 line / 67.8 branch / 70.7 function, then reinstalled VSIX.
 
-2026-05-17 00:40 — Reliability hardening after dogfood report: added JS lexical masking, node:assert recognition, multiline local import detection, Node fixture-test exclusion, and low-behavior source-risk filtering. Dogfood scan now shows 18 test files, 0 fixture cases, 0 no-assertion false positives, 0 Weak/Theater; npm test passes 81/81.
+2026-05-17 08:45 — Added deterministic risk-based test gaps: low branch/function coverage now creates source-risk Case File cards, cards render suggested scenario gaps, Markdown reports export them, and AI reviewer prompts include them as deterministic context. Verified npm test 113/113 and reinstalled VSIX.
 
-2026-05-16 22:37 — Added Generate Report flow with deterministic and AI-optimized modes, selectable verdict groups, suite/coverage summary fields, and per-case AI suggestions. npm test passes 76/76.
+2026-05-17 08:18 — Replaced hover-only metric explanations with a compact Metric guide disclosure in the Case File dashboard, verified unit tests, and reinstalled the VSIX.
 
-2026-05-17 00:16 — Replaced QuickPick report selection with a Reports sidebar webview: mode segmented control, verdict checkboxes, case/test summary, and inline report status/progress. Generate Report now focuses the sidebar view. npm test passes 76/76.
+2026-05-17 08:13 — Added KPI explanations: runtime metrics and verdict cards now have hover tooltips and aria labels explaining units, coverage source, and distinction between inspected test files and executed test cases. Also fixed stale runtime note to say coverage file loaded when coverage exists without a fresh pass-count run. npm test passes 108/108; VSIX reinstalled.
 
-2026-05-16 22:27 — Added Node.js self-scan support and filtered support fixture projects from normal scans so Test Inspector analyzes its own real unit suite; npm test passes 74/74.
+2026-05-17 08:00 — Added Runtime Evidence to the Case File dashboard and reports: test files, test cases passing/discovered, line/branch/function coverage, coverage-run status, and clearer verdict labels such as Strong test files and Missing source files. npm test passes 108/108; npm run coverage succeeds and reports 78.5% line, 66% branch, 70.1% function coverage; VSIX reinstalled.
 
-2026-05-17 00:05 — Added Test Inspector: Generate Report command with deterministic and AI-optimized modes plus multi-select verdict groups. Reports include scope, project/test/coverage summary, filtered case groups, and per-case AI feedback when requested. npm test passes 76/76.
+2026-05-17 07:38 — Completed runtime coverage layer and dogfooding: added Generate Coverage command, Reports sidebar coverage metric/button, coverage report tables, current-file test running, weighted LCOV totals, and a repo-local npm coverage script emitting coverage/lcov.info. npm test passes 107/107; npm run coverage succeeds; self-scan reads 78.1% line, 65% branch, 68.8% function coverage with 29 Strong and no Missing/Weak/Theater; VSIX reinstalled.
 
-2026-05-16 22:10 — Audited stream after user manual smoke test. Verdict REQUEST CHANGES: implementation matches spec and tests pass, but before merge split new target wiring out of oversized extension.ts and fix/document workspace-trust handling for Git-spawning target refreshes.
+2026-05-17 07:36 — Added runtime coverage generation and current-file test running: Reports sidebar now shows line coverage and Generate Coverage, coverage commands are previewed and run only when explicitly configured, parsed reports include line/branch/function/statement coverage, Node current-file runs avoid Jest-only flags. npm test passes 107/107; dogfood self-scan is 29 Strong, 0 Missing/Weak/Theater; VSIX reinstalled.
+
+2026-05-16 23:39 — Fixed Reports mode selection highlight, added missing critical behavior tests across report/AI controllers, templates, tree views, panels, state, tracked repos, and extension activation. Dogfood self-scan now reports 28 Strong, 0 Missing, 0 Weak, 0 Theater. Reinstalled updated VSIX.
 
 ## Open questions
 _Things blocked on user input. Remove when resolved._

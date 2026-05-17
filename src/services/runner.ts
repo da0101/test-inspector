@@ -106,6 +106,10 @@ export async function runCoverage(project: TestProject, onOutput?: (line: string
   };
 }
 
+export function coverageCommandPreview(project: TestProject): string[] {
+  return coverageCommands(project).map((item) => [item.command, ...item.args].join(' '));
+}
+
 function safeParseJestLikeJson(project: TestProject, stdout: string, onError: (message: string) => void): TestFile[] {
   try {
     return parseJestLikeJson(project, stdout);

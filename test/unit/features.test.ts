@@ -120,6 +120,72 @@ test('ignores low-behavior template style files when ranking source risks', asyn
   }
 });
 
+test('deprioritizes high-line-coverage template render helpers with related tests', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'test-inspector-template-risk-'));
+  try {
+    await mkdir(path.join(root, 'src', 'views', 'caseFile', 'template'), { recursive: true });
+    await mkdir(path.join(root, 'test', 'unit'), { recursive: true });
+    const sourcePath = path.join(root, 'src', 'views', 'caseFile', 'template', 'render.ts');
+    const testPath = path.join(root, 'test', 'unit', 'render.test.ts');
+    await writeFile(
+      sourcePath,
+      "export function render(state: 'ready' | 'error') { return state === 'ready' ? '<button>Open</button>' : '<p role=\"alert\">Error</p>'; }\n",
+    );
+    await writeFile(
+      testPath,
+      "import { render } from '../../src/views/caseFile/template/render';\ntest('renders ready state', () => { render('ready'); });\n",
+    );
+
+    const project = { id: `node:${root}`, rootPath: root, framework: 'node' as const, label: 'Node.js project', configFiles: [] };
+    const risks = await analyzeSourceRisks(
+      [project],
+      [{ path: testPath, projectId: project.id, status: 'unknown', testCases: [], qualityFindings: [] }],
+      [{
+        projectId: project.id,
+        files: [{ path: 'out/src/views/caseFile/template/render.js', linesPct: 95, branchesPct: 45, functionsPct: 100 }],
+        totals: { linesPct: 95, branchesPct: 45, functionsPct: 100 },
+      }],
+    );
+
+    assert.equal(risks.length, 0);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test('deprioritizes high-line-coverage view template entry files with related tests', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'test-inspector-view-template-risk-'));
+  try {
+    await mkdir(path.join(root, 'src', 'views', 'reports'), { recursive: true });
+    await mkdir(path.join(root, 'test', 'unit'), { recursive: true });
+    const sourcePath = path.join(root, 'src', 'views', 'reports', 'template.ts');
+    const testPath = path.join(root, 'test', 'unit', 'reportsTemplate.test.ts');
+    await writeFile(
+      sourcePath,
+      "export function renderReports(mode: 'ai' | 'deterministic') { return mode === 'ai' ? '<button>AI</button>' : '<button>Deterministic</button>'; }\n",
+    );
+    await writeFile(
+      testPath,
+      "import { renderReports } from '../../src/views/reports/template';\ntest('renders deterministic mode', () => { renderReports('deterministic'); });\n",
+    );
+
+    const project = { id: `node:${root}`, rootPath: root, framework: 'node' as const, label: 'Node.js project', configFiles: [] };
+    const risks = await analyzeSourceRisks(
+      [project],
+      [{ path: testPath, projectId: project.id, status: 'unknown', testCases: [], qualityFindings: [] }],
+      [{
+        projectId: project.id,
+        files: [{ path: 'out/src/views/reports/template.js', linesPct: 99, branchesPct: 45, functionsPct: 100 }],
+        totals: { linesPct: 99, branchesPct: 45, functionsPct: 100 },
+      }],
+    );
+
+    assert.equal(risks.length, 0);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test('treats barrel-imported source files as indirectly related to tests', async () => {
   const root = await mkdtemp(path.join(tmpdir(), 'test-inspector-barrel-risk-'));
   try {
@@ -155,6 +221,40 @@ test('treats barrel-imported source files as indirectly related to tests', async
       risks.map((risk) => path.relative(root, risk.path)),
       ['src/services/reportController.ts']
     );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test('flags critical source risk when line coverage is fine but branch coverage is low', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'test-inspector-branch-risk-'));
+  try {
+    await mkdir(path.join(root, 'src', 'services'), { recursive: true });
+    await mkdir(path.join(root, 'test', 'unit'), { recursive: true });
+    const sourcePath = path.join(root, 'src', 'services', 'uploadController.ts');
+    const testPath = path.join(root, 'test', 'unit', 'uploadController.test.ts');
+    await writeFile(
+      sourcePath,
+      "export async function upload(file?: File) { if (!file) return { ok: false }; return fetch('/api/upload'); }\n",
+    );
+    await writeFile(
+      testPath,
+      "import { upload } from '../../src/services/uploadController';\ntest('uploads file', async () => { await upload({} as File); });\n",
+    );
+
+    const project = { id: `node:${root}`, rootPath: root, framework: 'node' as const, label: 'Node.js project', configFiles: [] };
+    const risks = await analyzeSourceRisks(
+      [project],
+      [{ path: testPath, projectId: project.id, status: 'unknown', testCases: [], qualityFindings: [] }],
+      [{
+        projectId: project.id,
+        files: [{ path: 'out/src/services/uploadController.js', linesPct: 82, branchesPct: 40, functionsPct: 100 }],
+        totals: { linesPct: 82, branchesPct: 40, functionsPct: 100 },
+      }],
+    );
+
+    assert.equal(risks.length, 1);
+    assert.ok(risks[0]!.findings.some((finding) => finding.message.includes('Low branch coverage')));
   } finally {
     await rm(root, { recursive: true, force: true });
   }

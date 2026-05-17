@@ -30,9 +30,7 @@ export class CaseFileScanner {
     }
     this.output.appendLine(`[refresh] scanning ${folders.length} workspace folder(s)`);
 
-    const detectedProjects = (await Promise.all(this.adapters.map((adapter) => adapter.detectProjects(folders)))).flat();
-    const projects = detectedProjects.filter((project) => !isSupportFixtureProject(project, folders));
-    const skippedSupport = detectedProjects.length - projects.length;
+    const { projects, skippedSupport } = await detectScannableProjects(this.adapters, folders);
     if (skippedSupport > 0) {
       this.output.appendLine(`[refresh] skipped ${skippedSupport} support fixture project(s)`);
     }
@@ -100,6 +98,15 @@ export class CaseFileScanner {
     }
     return bundle;
   }
+}
+
+export async function detectScannableProjects(
+  adapters: TestFrameworkAdapter[],
+  folders: string[]
+): Promise<{ projects: TestProject[]; skippedSupport: number }> {
+  const detectedProjects = (await Promise.all(adapters.map((adapter) => adapter.detectProjects(folders)))).flat();
+  const projects = detectedProjects.filter((project) => !isSupportFixtureProject(project, folders));
+  return { projects, skippedSupport: detectedProjects.length - projects.length };
 }
 
 function isSupportFixtureProject(project: TestProject, folders: string[]): boolean {

@@ -56,6 +56,16 @@ function renderCase(c: CaseFile, project: TestProject | undefined): string {
       lines.push(`  - \`${s.name}\` (weight ${s.weight})${detail}${loc}`);
     }
   }
+  if (c.evidence.gaps?.length) {
+    lines.push('- **Suggested test gaps:**');
+    for (const gap of c.evidence.gaps) {
+      lines.push(`  - **${gap.severity.toUpperCase()}** ${gap.title} — ${gap.reason}`);
+      lines.push(`    - Suggested test: ${gap.suggestedTest}`);
+      if (gap.evidence.length > 0) {
+        lines.push(`    - Evidence: ${gap.evidence.join('; ')}`);
+      }
+    }
+  }
   if (c.aiReview) {
     lines.push('- **AI review:**');
     if (c.aiReview.status === 'error') {
@@ -118,11 +128,20 @@ export function exportCaseFileAsMarkdown(bundle: CaseFileBundle, options: CaseFi
   lines.push(`- **Projects detected:** ${(bundle.projects ?? []).length}`);
   lines.push(`- **Test files:** ${(bundle.testFiles ?? []).length}`);
   lines.push(`- **Test cases discovered:** ${(bundle.testFiles ?? []).reduce((sum, file) => sum + file.testCases.length, 0)}`);
+  if (bundle.runtime?.passed !== undefined) {
+    lines.push(`- **Runtime test result:** ${bundle.runtime.passed}/${bundle.runtime.testCases} passing`);
+  }
   lines.push(`- **Coverage summaries:** ${(bundle.coverage ?? []).length}`);
   const lineCoverage = average((bundle.coverage ?? []).map((summary) => summary.totals.linesPct).filter((v): v is number => typeof v === 'number'));
+  const branchCoverage = average((bundle.coverage ?? []).map((summary) => summary.totals.branchesPct).filter((v): v is number => typeof v === 'number'));
+  const functionCoverage = average((bundle.coverage ?? []).map((summary) => summary.totals.functionsPct).filter((v): v is number => typeof v === 'number'));
+  const statementCoverage = average((bundle.coverage ?? []).map((summary) => summary.totals.statementsPct).filter((v): v is number => typeof v === 'number'));
   if (lineCoverage !== undefined) {
     lines.push(`- **Average line coverage:** ${lineCoverage}%`);
   }
+  if (branchCoverage !== undefined) lines.push(`- **Average branch coverage:** ${branchCoverage}%`);
+  if (functionCoverage !== undefined) lines.push(`- **Average function coverage:** ${functionCoverage}%`);
+  if (statementCoverage !== undefined) lines.push(`- **Average statement coverage:** ${statementCoverage}%`);
   for (const v of VERDICT_ORDER) {
     lines.push(`- **${VERDICT_HEADER[v]}**: ${totals[v] ?? 0}`);
   }
@@ -137,6 +156,24 @@ export function exportCaseFileAsMarkdown(bundle: CaseFileBundle, options: CaseFi
       const fwLabel = FRAMEWORK_LABEL[p.framework] ?? p.framework;
       const count = selected.filter((c) => c.target.projectId === p.id).length;
       lines.push(`- **${p.label}** (${fwLabel}) — ${count} case(s)`);
+    }
+  }
+  if (bundle.coverage?.length) {
+    lines.push('');
+    lines.push('### Coverage by project');
+    lines.push('');
+    lines.push('| Project | Lines | Branches | Functions | Statements | Files |');
+    lines.push('|---|---:|---:|---:|---:|---:|');
+    for (const summary of bundle.coverage) {
+      const project = projectMap.get(summary.projectId);
+      lines.push([
+        `| ${project?.label ?? summary.projectId}`,
+        formatPct(summary.totals.linesPct),
+        formatPct(summary.totals.branchesPct),
+        formatPct(summary.totals.functionsPct),
+        formatPct(summary.totals.statementsPct),
+        String(summary.files.length)
+      ].join(' | ') + ' |');
     }
   }
   lines.push('');
@@ -164,6 +201,10 @@ export function exportCaseFileAsMarkdown(bundle: CaseFileBundle, options: CaseFi
   lines.push('_Test Inspector is a local-first detective for unit tests. The tool only informs — you fix and rescan._');
 
   return lines.join('\n');
+}
+
+function formatPct(value: number | undefined): string {
+  return value === undefined ? 'unknown' : `${value}%`;
 }
 
 function selectCases(bundle: CaseFileBundle, verdicts: CaseVerdict[] | undefined): CaseFile[] {

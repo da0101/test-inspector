@@ -14,6 +14,15 @@ function makeCase(): CaseFile {
         { name: 'trivial-assertion', weight: 30, detail: 'expect(x).toBe(x)', location: { file: '/repo/foo.test.ts', line: 12 } },
       ],
       relatedTests: [],
+      gaps: [
+        {
+          title: 'foo.ts: failure path needs a test',
+          severity: 'important',
+          reason: 'Branch coverage is low.',
+          evidence: ['40% branches coverage'],
+          suggestedTest: 'Add an error-path test.',
+        },
+      ],
     },
     suggestion: { kind: 'delete', text: 'Delete and rewrite' },
   };
@@ -32,6 +41,8 @@ test('llm-enrich · prompt includes verdict, signals, and numbered file content'
   const prompt = buildUserPrompt({ caseFile: makeCase(), fileContent: FILE_CONTENT });
   assert.match(prompt, /VERDICT: THEATER/);
   assert.match(prompt, /trivial-assertion/);
+  assert.match(prompt, /DETERMINISTIC TEST GAPS/);
+  assert.match(prompt, /failure path needs a test/);
   assert.match(prompt, /^1: import Foo/m);
   assert.match(prompt, /^4:\s+expect\(true\)/m);
 });

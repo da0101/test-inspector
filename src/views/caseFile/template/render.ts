@@ -19,12 +19,26 @@ export function relativePath(absolutePath: string, project: TestProject | undefi
 
 export function renderKpiTile(verdict: CaseVerdict, count: number, total: number): string {
   const share = total > 0 ? Math.round((count / total) * 100) : 0;
+  const label = verdict === 'STRONG'
+    ? 'Strong test files'
+    : verdict === 'MISSING'
+      ? 'Missing source files'
+      : VERDICT_LABEL[verdict];
+  const tooltip = verdict === 'THEATER'
+    ? 'Test files that appear to pass without proving real behavior, such as trivial or self-mocking tests.'
+    : verdict === 'WEAK'
+      ? 'Test files with weak quality signals, such as shallow assertions or unclear behavior coverage.'
+      : verdict === 'MISSING'
+        ? 'Critical source files where Test Inspector found no related test evidence or effectively no coverage.'
+        : verdict === 'STRONG'
+          ? 'Test files with no static theater or weak-test signals. This is file quality, not executed test-case count.'
+          : VERDICT_BLURB[verdict];
   return `
-    <button class="kpi" data-verdict="${escapeHtml(verdict)}" data-blurb="${escapeHtml(VERDICT_BLURB[verdict])}" aria-label="Filter to ${VERDICT_LABEL[verdict]}">
+    <button class="kpi" data-verdict="${escapeHtml(verdict)}" data-blurb="${escapeHtml(VERDICT_BLURB[verdict])}" title="${escapeHtml(tooltip)}" aria-label="Filter to ${label}. ${tooltip}">
       <span class="kpi-icon kpi-icon--${verdict.toLowerCase()}">${ICONS[verdict]}</span>
       <span class="kpi-body">
         <span class="kpi-value" data-count>${count}</span>
-        <span class="kpi-label">${VERDICT_LABEL[verdict]}</span>
+        <span class="kpi-label">${escapeHtml(label)}</span>
         <span class="kpi-blurb">
           <span class="kpi-blurb-text">${VERDICT_BLURB[verdict]}</span>
           <span class="kpi-blurb-sep" data-sep>${total > 0 ? '·' : ''}</span>
@@ -114,6 +128,26 @@ export function renderAiReview(review: CaseFileAiReview | undefined): string {
   `;
 }
 
+function renderTestGaps(c: CaseFile): string {
+  const gaps = c.evidence.gaps ?? [];
+  if (gaps.length === 0) return '';
+  return `
+    <section class="case-gaps" aria-label="Suggested test gaps">
+      <div class="case-gaps-title">Suggested test gaps</div>
+      <ul>
+        ${gaps.map((gap) => `
+          <li>
+            <span class="gap-severity gap-severity--${escapeHtml(gap.severity)}">${escapeHtml(gap.severity)}</span>
+            <strong>${escapeHtml(gap.title)}</strong>
+            <span>${escapeHtml(gap.reason)}</span>
+            <em>${escapeHtml(gap.suggestedTest)}</em>
+          </li>
+        `).join('')}
+      </ul>
+    </section>
+  `;
+}
+
 export function renderCase(c: CaseFile, project: TestProject | undefined): string {
   const rel = relativePath(c.target.path, project);
   const projectLabel = project ? project.label || project.id : c.target.projectId;
@@ -135,6 +169,7 @@ export function renderCase(c: CaseFile, project: TestProject | undefined): strin
       </header>
       <h3>${escapeHtml(c.story.headline)}</h3>
       <p>${escapeHtml(c.story.paragraph)}</p>
+      ${renderTestGaps(c)}
       ${hasEvidence ? `
         <section class="case-evidence" hidden>
           <div class="evidence-title">Evidence — ${c.evidence.signals.length} signal${c.evidence.signals.length === 1 ? '' : 's'}</div>

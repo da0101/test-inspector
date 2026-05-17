@@ -29,6 +29,8 @@ function escapeHtml(value: string): string {
 
 export function renderReportsHtml(state: ReportsState, opts: { nonce: string; cspSource: string }): string {
   const hasCases = state.bundle.cases.length > 0;
+  const coveragePct = averageCoverage(state.bundle.coverage?.map((summary) => summary.totals.linesPct));
+  const coverageLabel = coveragePct === undefined ? 'unknown' : `${coveragePct}%`;
   const groups = VERDICTS
     .filter((verdict) => (state.bundle.totals[verdict] ?? 0) > 0)
     .map((verdict) => {
@@ -88,6 +90,7 @@ export function renderReportsHtml(state: ReportsState, opts: { nonce: string; cs
       padding: 7px 8px;
       min-width: 0;
     }
+    .metric--wide { grid-column: 1 / -1; }
     .metric strong {
       display: block;
       font-size: 18px;
@@ -118,6 +121,7 @@ export function renderReportsHtml(state: ReportsState, opts: { nonce: string; cs
       border: 1px solid var(--border);
       border-radius: var(--radius);
       overflow: hidden;
+      background: var(--vscode-input-background);
     }
     .segmented button {
       border: 0;
@@ -128,10 +132,16 @@ export function renderReportsHtml(state: ReportsState, opts: { nonce: string; cs
       font: inherit;
       cursor: pointer;
     }
+    .segmented button + button { border-left: 1px solid var(--border); }
     .segmented button.active {
-      background: var(--vscode-button-secondaryBackground);
-      color: var(--vscode-button-secondaryForeground);
+      background: var(--vscode-button-background);
+      color: var(--vscode-button-foreground);
       font-weight: 600;
+      box-shadow: inset 0 0 0 1px var(--vscode-focusBorder);
+    }
+    .segmented button:focus-visible {
+      outline: 1px solid var(--vscode-focusBorder);
+      outline-offset: -2px;
     }
     .check-row {
       display: grid;
@@ -160,6 +170,18 @@ export function renderReportsHtml(state: ReportsState, opts: { nonce: string; cs
     }
     .primary:hover { background: var(--vscode-button-hoverBackground); }
     .primary[disabled] { opacity: 0.55; cursor: not-allowed; }
+    .secondary {
+      width: 100%;
+      margin-top: 6px;
+      padding: 6px 10px;
+      border-radius: var(--radius);
+      border: 1px solid var(--vscode-button-border, var(--border));
+      background: var(--vscode-button-secondaryBackground);
+      color: var(--vscode-button-secondaryForeground);
+      font: inherit;
+      cursor: pointer;
+    }
+    .secondary:hover { background: var(--vscode-button-secondaryHoverBackground, var(--vscode-list-hoverBackground)); }
     .status {
       margin-top: var(--space-2);
       padding: 6px 8px;
@@ -175,19 +197,21 @@ export function renderReportsHtml(state: ReportsState, opts: { nonce: string; cs
   <div class="summary">
     <div class="metric"><strong>${state.bundle.cases.length}</strong><span>cases</span></div>
     <div class="metric"><strong>${state.bundle.testFiles?.length ?? 0}</strong><span>test files</span></div>
+    <div class="metric metric--wide"><strong>${escapeHtml(coverageLabel)}</strong><span>line coverage</span></div>
   </div>
   ${scope ? `<div class="scope" title="${escapeHtml(scope)}">${escapeHtml(scope)}</div>` : ''}
   ${hasCases ? `
     <div class="section-label">Mode</div>
     <div class="segmented" role="group" aria-label="Report mode">
-      <button type="button" data-mode="deterministic" class="active">Deterministic</button>
-      <button type="button" data-mode="ai">AI</button>
+      <button type="button" data-mode="deterministic" class="active" aria-pressed="true">Deterministic</button>
+      <button type="button" data-mode="ai" aria-pressed="false">AI</button>
     </div>
     <div class="section-label">Groups</div>
     <form id="form">
       ${groups}
       <button id="generate" class="primary" type="submit">Generate Report</button>
     </form>
+    <button id="coverage" class="secondary" type="button">Generate Coverage</button>
     ${status}
   ` : `<div class="empty">Scan a target to enable reports.</div>`}
   <script nonce="${opts.nonce}">
@@ -197,7 +221,11 @@ export function renderReportsHtml(state: ReportsState, opts: { nonce: string; cs
     document.querySelectorAll('[data-mode]').forEach((button) => {
       button.addEventListener('click', () => {
         mode = button.dataset.mode;
-        document.querySelectorAll('[data-mode]').forEach((item) => item.classList.toggle('active', item === button));
+        document.querySelectorAll('[data-mode]').forEach((item) => {
+          const active = item === button;
+          item.classList.toggle('active', active);
+          item.setAttribute('aria-pressed', active ? 'true' : 'false');
+        });
         if (generate) generate.textContent = mode === 'ai' ? 'Generate AI Report' : 'Generate Report';
       });
     });
@@ -205,6 +233,9 @@ export function renderReportsHtml(state: ReportsState, opts: { nonce: string; cs
       event.preventDefault();
       const verdicts = Array.from(document.querySelectorAll('input[name="verdict"]:checked')).map((input) => input.value);
       vscode.postMessage({ type: 'generate', mode, verdicts });
+    });
+    document.getElementById('coverage')?.addEventListener('click', () => {
+      vscode.postMessage({ type: 'coverage' });
     });
     window.addEventListener('message', (event) => {
       if (event.data?.type !== 'progress') return;
@@ -220,4 +251,10 @@ export function renderReportsHtml(state: ReportsState, opts: { nonce: string; cs
   </script>
 </body>
 </html>`;
+}
+
+function averageCoverage(values: Array<number | undefined> | undefined): number | undefined {
+  const present = (values ?? []).filter((value): value is number => typeof value === 'number');
+  if (present.length === 0) return undefined;
+  return Math.round((present.reduce((sum, value) => sum + value, 0) / present.length) * 10) / 10;
 }

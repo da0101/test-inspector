@@ -11,6 +11,7 @@ import {
   projectLabel,
   scriptCommand
 } from './shared';
+import { jsRunner, relativeArg, runCommand } from '../services/runner';
 import { walkFiles } from '../utils/fs';
 
 export class NodeAdapter extends BaseAdapter {
@@ -55,6 +56,16 @@ export class NodeAdapter extends BaseAdapter {
       }
       return /(^|\/)(test|tests|__tests__)\//.test(normalized);
     });
+  }
+
+  runAll(project: TestProject) {
+    const runner = jsRunner(project);
+    return runCommand(project, runner.command, runner.baseArgs, false);
+  }
+
+  runFile(project: TestProject, filePath: string) {
+    const runner = jsRunner(project);
+    return runCommand(project, runner.command, [...runner.baseArgs, relativeArg(project, filePath)], false);
   }
 }
 

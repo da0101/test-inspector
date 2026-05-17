@@ -7,6 +7,7 @@ import {
   detectVagueTitles,
 } from './heuristics';
 import { generateStory, generateSuggestion } from './caseFileStory';
+import { inferTestGaps, type TestGap } from './testGaps';
 
 export type CaseVerdict = 'THEATER' | 'WEAK' | 'MISSING' | 'STRONG' | 'OK';
 export type SuggestionKind = 'delete' | 'rewrite' | 'add' | 'review' | 'ignore';
@@ -32,6 +33,7 @@ export type CaseFile = {
     signals: CaseSignal[];
     relatedTests: CaseRelatedTest[];
     coverage?: CoverageFile;
+    gaps?: TestGap[];
   };
   suggestion: {
     kind: SuggestionKind;
@@ -72,6 +74,13 @@ export type CaseFileBundle = {
   totals: Record<CaseVerdict, number>;
   /** Cases excluded from `cases` because the user marked them reviewed and the file hasn't changed since. */
   hiddenReviewedCount?: number;
+  runtime?: {
+    testCases: number;
+    passed?: number;
+    failed?: number;
+    generatedAt?: number;
+    command?: string;
+  };
 };
 
 export type SynthesizeInput = {
@@ -119,6 +128,7 @@ export async function synthesizeCaseFile(
   bundle.projects = input.projects;
   bundle.testFiles = input.testFiles;
   bundle.coverage = input.coverageSummaries ?? (input.coverage ? [input.coverage] : undefined);
+  bundle.runtime = { testCases: (input.testFiles ?? []).reduce((sum, file) => sum + file.testCases.length, 0) };
 
   for (const testFile of input.testFiles ?? []) {
     let content: string | null = null;
@@ -146,12 +156,17 @@ export async function synthesizeCaseFile(
 function classifySourceFile(risk: SourceFileRisk): CaseFile | null {
   const noTests = (risk.relatedTests?.length ?? 0) === 0;
   const linesPct = risk.coverage?.linesPct;
+  const branchesPct = risk.coverage?.branchesPct;
+  const functionsPct = risk.coverage?.functionsPct;
   const veryLowCoverage = linesPct !== undefined && linesPct < 5;
   const lowCoverage = linesPct !== undefined && linesPct < 50;
+  const lowBranchCoverage = branchesPct !== undefined && branchesPct < 70;
+  const lowFunctionCoverage = functionsPct !== undefined && functionsPct < 70;
+  const lowScenarioCoverage = lowBranchCoverage || lowFunctionCoverage;
   const critical = (risk.criticality ?? 0) > 0;
 
   if (!critical) return null;
-  if (!noTests && !lowCoverage) return null;
+  if (!noTests && !lowCoverage && !lowScenarioCoverage) return null;
 
   // Promote near-zero coverage to MISSING — basename-matched test files often
   // exist without actually exercising the source. 1% coverage = effectively
@@ -192,28 +207,43 @@ function classifySourceFile(risk: SourceFileRisk): CaseFile | null {
       detail: `${linesPct.toFixed(0)}% line coverage`,
     });
   }
+  if (lowBranchCoverage && branchesPct !== undefined) {
+    signalList.push({
+      name: 'low-branch-coverage',
+      weight: 18,
+      detail: `${branchesPct.toFixed(0)}% branch coverage — alternate paths need tests`,
+    });
+  }
+  if (lowFunctionCoverage && functionsPct !== undefined) {
+    signalList.push({
+      name: 'low-function-coverage',
+      weight: 12,
+      detail: `${functionsPct.toFixed(0)}% function coverage — some functions are unreached`,
+    });
+  }
 
   const signalSummary = criticalitySignals.slice(0, 4).join(', ');
   const headline = noTests
     ? `${name} — critical code with no tests`
     : veryLowCoverage
       ? `${name} — critical code with ${linesPct?.toFixed(0)}% coverage (effectively untested)`
-      : `${name} — critical code with ${linesPct?.toFixed(0)}% coverage`;
+      : lowCoverage
+        ? `${name} — critical code with ${linesPct?.toFixed(0)}% coverage`
+        : `${name} — critical code with untested branches/functions`;
 
   const paragraph = noTests
     ? `This file looks like critical code (${signalSummary || 'flagged by multiple criticality signals'}) but no test file imports it or covers it. If it breaks, you'll only find out in production. Add a test that exercises the happy path and at least one error path.`
     : veryLowCoverage
       ? `This file is critical (${signalSummary || 'flagged by multiple criticality signals'}) and only ${linesPct?.toFixed(0)}% of its lines are exercised. A test file exists by name but the coverage is so low it's not actually testing this code. Either rewrite that test to drive real behavior, or add a new one.`
-      : `This file is critical (${signalSummary || 'flagged by multiple criticality signals'}) and only ${linesPct?.toFixed(0)}% of its lines are exercised by the existing tests. The uncovered lines are where bugs hide. Add cases that exercise the error / branch paths the existing tests skip.`;
+      : lowCoverage
+        ? `This file is critical (${signalSummary || 'flagged by multiple criticality signals'}) and only ${linesPct?.toFixed(0)}% of its lines are exercised by the existing tests. The uncovered lines are where bugs hide. Add cases that exercise the error / branch paths the existing tests skip.`
+        : `This file is critical (${signalSummary || 'flagged by multiple criticality signals'}) and the latest coverage shows weak branch/function evidence. Existing tests reach the file, but they do not prove enough alternate outcomes. Add cases for the skipped decisions and unreached functions.`;
 
   const suggestion: CaseFile['suggestion'] = {
     kind: 'add',
-    text: risk.recommendation
-      ? risk.recommendation
-      : noTests
-        ? `Add a new test file that imports and exercises \`${name}\`. Start with one happy-path case + one error-path case.`
-        : `Extend existing tests for \`${name}\` to cover the uncovered lines (the error / branch paths).`,
+    text: sourceSuggestionText(risk, name, noTests),
   };
+  const gaps = inferTestGaps(risk);
 
   return {
     target: { kind: 'source', path: risk.path, projectId: risk.projectId },
@@ -224,9 +254,20 @@ function classifySourceFile(risk: SourceFileRisk): CaseFile | null {
       signals: signalList,
       relatedTests: (risk.relatedTests ?? []).map((p) => ({ path: p, weaknesses: [] })),
       coverage: risk.coverage,
+      gaps,
     },
     suggestion,
   };
+}
+
+function sourceSuggestionText(risk: SourceFileRisk, name: string, noTests: boolean): string {
+  const base = risk.recommendation
+    ? risk.recommendation
+    : noTests
+      ? `Add a new test file that imports and exercises \`${name}\`. Start with one happy-path case + one error-path case.`
+      : `Extend existing tests for \`${name}\` to cover the uncovered lines (the error / branch paths).`;
+  const firstGap = inferTestGaps(risk)[0];
+  return firstGap ? `${base} Start with: ${firstGap.suggestedTest}` : base;
 }
 
 function classifyTestFile(testFile: TestFile, content: string | null): CaseFile {

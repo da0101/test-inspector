@@ -106,6 +106,8 @@ test('caseFile · classifies a critical source file with no related tests as MIS
   assert.equal(bundle.cases[0]!.verdict, 'MISSING');
   assert.equal(bundle.cases[0]!.suggestion.kind, 'add');
   assert.match(bundle.cases[0]!.story.paragraph, /no test file imports it/);
+  assert.ok(bundle.cases[0]!.evidence.gaps?.length);
+  assert.match(bundle.cases[0]!.suggestion.text, /Start with:/);
 });
 
 test('caseFile · does not emit a source-file card for non-critical files', async () => {

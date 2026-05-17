@@ -1,8 +1,10 @@
+import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { createAdapters } from './adapters';
 import { createAiReviewer, configureLlm } from './services/aiReviewController';
 import { emptyBundle, type CaseFileBundle } from './services/caseFile';
-import { CaseFileScanner } from './services/caseFileScanner';
+import { CaseFileScanner, detectScannableProjects } from './services/caseFileScanner';
+import { buildCoveragePlan, formatCoveragePreview, generateCoverageForPlan } from './services/coverageController';
 import { createProviderRegistry } from './services/llm';
 import { generateCaseFileReportForSelection } from './services/reportController';
 import { ReviewedStore } from './services/reviewed';
@@ -32,6 +34,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
   let lastRefreshAt = 0;
   let latestBundle: CaseFileBundle = emptyBundle();
+  let latestSuccessfulRun: { generatedAt: number; command: string } | null = null;
   let reportsView: ReportsViewProvider;
 
   if (reviewed) {
@@ -71,6 +74,15 @@ export function activate(context: vscode.ExtensionContext): void {
           lastRefreshAt = Date.now();
           const rawBundle = await scanner.scan(target ? [target.worktree.path] : workspaceFolders(), scope);
           latestBundle = targetController.setLatestRawBundle(rawBundle);
+          if (latestSuccessfulRun && latestBundle.runtime) {
+            latestBundle.runtime = {
+              ...latestBundle.runtime,
+              passed: latestBundle.runtime.testCases,
+              failed: 0,
+              generatedAt: latestSuccessfulRun.generatedAt,
+              command: latestSuccessfulRun.command
+            };
+          }
           casesView.update(latestBundle);
           reportsView.update(latestBundle);
           panel.update(latestBundle);
@@ -84,6 +96,95 @@ export function activate(context: vscode.ExtensionContext): void {
       output.appendLine(`[refresh] error: ${msg}`);
       void vscode.window.showWarningMessage(`Test Inspector: refresh failed — ${msg}`);
     }
+  };
+
+  const coverageFolders = (): { target: ActiveTarget | null; folders: string[] } => {
+    const target = targetController.target;
+    return { target, folders: target ? [target.worktree.path] : workspaceFolders() };
+  };
+
+  const generateCoverage = async (onProgress?: (message: string) => void): Promise<boolean> => {
+    if (!vscode.workspace.isTrusted) {
+      output.appendLine('[coverage] refused — workspace is untrusted');
+      void vscode.window.showWarningMessage('Test Inspector: open as Trusted Workspace before running tests or coverage.');
+      return false;
+    }
+    const { target, folders } = coverageFolders();
+    if (folders.length === 0) {
+      void vscode.window.showInformationMessage('Test Inspector: open a workspace or choose a target before generating coverage.');
+      return false;
+    }
+    const plan = await buildCoveragePlan(adapters, folders);
+    if (plan.skippedSupport > 0) {
+      output.appendLine(`[coverage] skipped ${plan.skippedSupport} support fixture project(s)`);
+    }
+    if (plan.planned.length === 0) {
+      const skipped = plan.skipped.map((project) => project.label).join(', ') || 'No projects';
+      void vscode.window.showWarningMessage(`Test Inspector: no explicit coverage command configured. Skipped: ${skipped}.`);
+      return false;
+    }
+
+    const preview = formatCoveragePreview(plan.planned);
+    const approved = await vscode.window.showWarningMessage(
+      `Run coverage for ${plan.planned.length} project(s)?\n\n${preview}`,
+      { modal: true },
+      'Run coverage'
+    );
+    if (approved !== 'Run coverage') {
+      return false;
+    }
+
+    const result = await vscode.window.withProgress(
+      { location: vscode.ProgressLocation.Notification, title: 'Test Inspector: generating coverage...' },
+      async () => generateCoverageForPlan(adapters, plan.planned, (line) => {
+        output.appendLine(line);
+        onProgress?.(line.replace(/^\[coverage\]\s*/, ''));
+      })
+    );
+    const failed = result.runs.filter((run) => run.exitCode !== 0);
+    if (failed.length > 0) {
+      throw new Error(`Coverage failed for ${failed.map((run) => run.projectId).join(', ')}.`);
+    }
+    if (result.coverage.length === 0) {
+      throw new Error('Coverage command finished, but no supported coverage file was found.');
+    }
+    latestSuccessfulRun = {
+      generatedAt: Date.now(),
+      command: result.runs.map((run) => run.command).join(' && ')
+    };
+    await scanWorkspace(target ?? undefined, target ? targetController.featureScope.label : undefined);
+    return true;
+  };
+
+  const runCurrentFile = async (): Promise<void> => {
+    if (!vscode.workspace.isTrusted) {
+      output.appendLine('[run] refused — workspace is untrusted');
+      void vscode.window.showWarningMessage('Test Inspector: open as Trusted Workspace before running tests.');
+      return;
+    }
+    const filePath = vscode.window.activeTextEditor?.document.uri.fsPath;
+    if (!filePath) {
+      void vscode.window.showInformationMessage('Test Inspector: open a test file first.');
+      return;
+    }
+    const { folders } = coverageFolders();
+    const { projects } = await detectScannableProjects(adapters, folders.length ? folders : workspaceFolders());
+    const project = projects.find((candidate) => isInside(candidate.rootPath, filePath));
+    if (!project) {
+      void vscode.window.showWarningMessage('Test Inspector: current file is not inside a detected test project.');
+      return;
+    }
+    const adapter = adapters.find((candidate) => candidate.id === project.framework);
+    if (!adapter) return;
+    output.appendLine(`[run] ${project.label}: ${filePath}`);
+    const result = await vscode.window.withProgress(
+      { location: vscode.ProgressLocation.Notification, title: `Test Inspector: running ${vscode.workspace.asRelativePath(filePath)}...` },
+      async () => adapter.runFile(project, filePath)
+    );
+    output.appendLine(result.stdout.trim());
+    output.appendLine(result.stderr.trim());
+    const message = result.exitCode === 0 ? 'Test Inspector: test file passed.' : 'Test Inspector: test file failed. See output.';
+    void (result.exitCode === 0 ? vscode.window.showInformationMessage(message) : vscode.window.showWarningMessage(message));
   };
 
   const targetController = new TargetController({
@@ -100,7 +201,8 @@ export function activate(context: vscode.ExtensionContext): void {
 
   const reviewerView = new ReviewerViewProvider(context, llmRegistry, output);
   reportsView = new ReportsViewProvider(context, (mode, verdicts, onProgress) =>
-    generateCaseFileReportForSelection({ bundle: latestBundle, workspaceRoot, registry: llmRegistry, output, mode, verdicts, onProgress })
+    generateCaseFileReportForSelection({ bundle: latestBundle, workspaceRoot, registry: llmRegistry, output, mode, verdicts, onProgress }),
+    (onProgress) => generateCoverage(onProgress)
   );
   context.subscriptions.push(
     output,
@@ -130,9 +232,8 @@ export function activate(context: vscode.ExtensionContext): void {
   registerCommand('testInspector.scanTarget', (worktree?: unknown, repo?: unknown) => targetController.scanTarget(worktree, repo));
   registerCommand('testInspector.selectFeatureScope', () => targetController.selectFeatureScope());
   registerCommand('testInspector.configureLlm', () => configureLlm(context, output));
-  registerCommand('testInspector.runCurrentFile', () => {
-    void vscode.window.showInformationMessage('Test Inspector: per-file run wiring lands in Phase C.');
-  });
+  registerCommand('testInspector.runCurrentFile', () => runCurrentFile());
+  registerCommand('testInspector.generateCoverage', () => generateCoverage());
   registerCommand('testInspector.exportCaseFile', () => reportsView.focus());
   registerCommand('testInspector.generateReport', () => reportsView.focus());
   registerCommand('_testInspector.markReviewed', async (filePath?: unknown) => {
@@ -169,6 +270,11 @@ function safeCreateProviderRegistry(context: vscode.ExtensionContext, output: vs
 
 function workspaceFolders(): string[] {
   return vscode.workspace.workspaceFolders?.map((folder) => folder.uri.fsPath) ?? [];
+}
+
+function isInside(rootPath: string, filePath: string): boolean {
+  const relative = path.relative(rootPath, filePath);
+  return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
 }
 
 function scheduleInitialScan(

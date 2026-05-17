@@ -45,6 +45,21 @@ test('caseFile-boundary · 50% coverage with related tests → no card (covered 
   assert.equal(bundle.cases.length, 0);
 });
 
+test('caseFile-boundary · good line coverage but low branch coverage → WEAK scenario gap', async () => {
+  const bundle = await synthesizeCaseFile({
+    sourceRisks: [
+      risk(80, ['/repo/some.test.ts'], {
+        coverage: { path: 'lib/auth/login.ts', linesPct: 80, branchesPct: 45, functionsPct: 90 },
+      }),
+    ],
+  });
+  assert.equal(bundle.cases.length, 1);
+  assert.equal(bundle.cases[0]!.verdict, 'WEAK');
+  assert.match(bundle.cases[0]!.story.headline, /untested branches\/functions/);
+  assert.ok(bundle.cases[0]!.evidence.signals.some((signal) => signal.name === 'low-branch-coverage'));
+  assert.ok(bundle.cases[0]!.evidence.gaps?.some((gap) => gap.title.includes('alternate branches')));
+});
+
 test('caseFile-boundary · 0% coverage with NO related tests → MISSING with no-related-tests signal', async () => {
   const bundle = await synthesizeCaseFile({ sourceRisks: [risk(0, [])] });
   assert.equal(bundle.cases[0]!.verdict, 'MISSING');

@@ -41,6 +41,7 @@ export async function readProjectCoverage(project: TestProject): Promise<Coverag
 
 export function parseLcov(text: string, projectId: string, projectRoot = ''): CoverageSummary {
   const files: CoverageFile[] = [];
+  const totals = { linesHit: 0, linesFound: 0, functionsHit: 0, functionsFound: 0, branchesHit: 0, branchesFound: 0 };
   let current: {
     path?: string;
     linesFound?: number;
@@ -79,6 +80,12 @@ export function parseLcov(text: string, projectId: string, projectRoot = ''): Co
     } else if (current && line.startsWith('BRH:')) {
       current.branchesHit = Number(line.slice(4));
     } else if (current && line === 'end_of_record') {
+      totals.linesHit += current.linesHit ?? 0;
+      totals.linesFound += current.linesFound ?? 0;
+      totals.functionsHit += current.functionsHit ?? 0;
+      totals.functionsFound += current.functionsFound ?? 0;
+      totals.branchesHit += current.branchesHit ?? 0;
+      totals.branchesFound += current.branchesFound ?? 0;
       files.push({
         path: current.path ?? '',
         linesPct: pct(current.linesHit, current.linesFound),
@@ -90,7 +97,15 @@ export function parseLcov(text: string, projectId: string, projectRoot = ''): Co
     }
   }
 
-  return { projectId, files, totals: summarizeCoverage(files) };
+  return {
+    projectId,
+    files,
+    totals: {
+      linesPct: pct(totals.linesHit, totals.linesFound),
+      functionsPct: pct(totals.functionsHit, totals.functionsFound),
+      branchesPct: pct(totals.branchesHit, totals.branchesFound)
+    }
+  };
 }
 
 type CoveragePyJson = {
@@ -131,9 +146,13 @@ export function parseCoveragePyJson(json: CoveragePyJson, projectId: string, pro
 export function parseCoveragePyXml(xml: string, projectId: string, projectRoot = ''): CoverageSummary {
   const root = parseXmlLite(xml);
   const classes = findXmlNodes(root, 'class');
+  let totalLines = 0;
+  let coveredLines = 0;
   const files = classes.map((node) => {
     const lineRate = Number(node.attributes['line-rate']);
     const lineNodes = findXmlNodes(node, 'line');
+    totalLines += lineNodes.length;
+    coveredLines += lineNodes.filter((line) => Number(line.attributes.hits) > 0).length;
     return {
       path: normalizeCoveragePath(node.attributes.filename ?? '', projectRoot),
       linesPct: Number.isFinite(lineRate) ? lineRate * 100 : undefined,
@@ -144,7 +163,14 @@ export function parseCoveragePyXml(xml: string, projectId: string, projectRoot =
         .filter(Number.isFinite)
     };
   });
-  return { projectId, files, totals: summarizeCoverage(files) };
+  return {
+    projectId,
+    files,
+    totals: {
+      ...summarizeCoverage(files),
+      linesPct: pct(coveredLines, totalLines)
+    }
+  };
 }
 
 export function summarizeCoverage(files: CoverageFile[]): CoverageSummary['totals'] {
