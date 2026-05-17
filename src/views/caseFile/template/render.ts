@@ -184,7 +184,7 @@ export function renderCase(c: CaseFile, project: TestProject | undefined): strin
         <button class="btn" data-cmd="copy" data-text="${escapeHtml(c.suggestion.text)}">Copy suggestion</button>
         <button class="btn" data-cmd="aiReview" data-path="${escapeHtml(c.target.path)}">Ask AI reviewer</button>
         ${hasEvidence ? `<button class="btn" data-cmd="evidence">Show evidence</button>` : ''}
-        <button class="btn ghost" data-cmd="rescan" aria-label="Rescan the workspace">Rescan</button>
+        <button class="btn ghost" data-cmd="rescan" aria-label="Refresh the current Case File target">Refresh Case File</button>
         <button class="btn ghost" data-cmd="review" data-path="${escapeHtml(c.target.path)}" aria-label="Mark this case as reviewed and hide it until the file changes">Mark reviewed</button>
       </footer>
     </article>

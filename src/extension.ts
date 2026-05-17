@@ -224,8 +224,8 @@ export function activate(context: vscode.ExtensionContext): void {
   registerCommand('testInspector.openCaseFile', () => CaseFilePanel.show(context, { onAiReview: reviewCaseWithAi }));
   registerCommand('testInspector.openDashboard', () => CaseFilePanel.show(context, { onAiReview: reviewCaseWithAi }));
   registerCommand('testInspector.scan', () => scanWorkspace());
-  registerCommand('testInspector.refresh', () => scanWorkspace());
-  registerCommand('testInspector.refreshAll', () => scanWorkspace());
+  registerCommand('testInspector.refresh', () => scanWorkspace(targetController.target ?? undefined, targetController.featureScope.label));
+  registerCommand('testInspector.refreshAll', () => scanWorkspace(targetController.target ?? undefined, targetController.featureScope.label));
   registerCommand('testInspector.refreshTargets', () => targetController.refreshTargets());
   registerCommand('testInspector.addRepository', () => targetController.addRepository());
   registerCommand('testInspector.removeRepository', (repo?: unknown) => targetController.removeRepository(repo));

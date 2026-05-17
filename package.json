@@ -80,7 +80,7 @@
       },
       {
         "view": "testInspector.cases",
-        "contents": "Test Inspector finds tests that are **theater**, **weak**, or **missing** — without running them.\n\nScanning starts automatically when you open this view. If nothing appears below, click scan.\n\n[Scan this workspace now](command:testInspector.scan)\n[Open Case File panel](command:testInspector.openCaseFile)"
+        "contents": "Test Inspector finds tests that are **theater**, **weak**, or **missing** — without running them.\n\nScanning starts automatically when you open this view. If nothing appears below, refresh the Case File.\n\n[Refresh Case File](command:testInspector.refresh)\n[Open Case File panel](command:testInspector.openCaseFile)"
       }
     ],
     "commands": [
@@ -116,7 +116,7 @@
       },
       {
         "command": "testInspector.refresh",
-        "title": "Test Inspector: Refresh",
+        "title": "Test Inspector: Refresh Case File",
         "icon": "$(refresh)"
       },
       {
@@ -178,7 +178,7 @@
           "group": "navigation@1"
         },
         {
-          "command": "testInspector.scan",
+          "command": "testInspector.refresh",
           "when": "view == testInspector.cases",
           "group": "navigation@2"
         },
