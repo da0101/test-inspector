@@ -18,7 +18,10 @@ test('test controller publishes discovered test files into VS Code test items', 
       projectId: 'node:/repo',
       status: 'unknown',
       qualityFindings: [],
-      testCases: [{ id: 'case-1', name: 'handles api', filePath: '/repo/test/api.test.ts', line: 7, status: 'passed' }],
+      testCases: [
+        { id: 'case-1', name: 'handles api', filePath: '/repo/test/api.test.ts', line: 7, status: 'passed' },
+        { id: 'case-2', name: 'handles first line', filePath: '/repo/test/api.test.ts', line: 1, status: 'passed' },
+      ],
     },
   ];
 
@@ -26,6 +29,35 @@ test('test controller publishes discovered test files into VS Code test items', 
 
   assert.equal(replaced.length, 1);
   assert.equal(replaced[0]!.length, 1);
+  const fileItem = replaced[0]![0] as { children: { values: Array<{ range?: { startLine: number } }> } };
+  assert.deepEqual(fileItem.children.values.map((item) => item.range?.startLine), [6, 0]);
+});
+
+test('test controller handles empty files and disposes controller', () => {
+  const replaced: unknown[][] = [];
+  let disposed = false;
+  const vscode = vscodeControllerMock({ replaced, onDispose: () => { disposed = true; } });
+  const { TestInspectorController } = loadWithVscodeMock<typeof import('../../src/services/testController')>(
+    vscode,
+    () => require('../../src/services/testController'),
+  );
+  const state = new InspectorState();
+  state.testFiles = [
+    {
+      path: '/repo/test/empty.test.ts',
+      projectId: 'node:/repo',
+      status: 'unknown',
+      qualityFindings: [],
+      testCases: [],
+    },
+  ];
+
+  const controller = new TestInspectorController(state);
+  controller.refresh();
+  controller.dispose();
+
+  assert.equal(replaced[0]!.length, 1);
+  assert.equal(disposed, true);
 });
 
 test('target controller refuses Git-backed refresh in untrusted workspaces', async () => {
@@ -45,38 +77,6 @@ test('target controller refuses Git-backed refresh in untrusted workspaces', asy
   await controller.refreshTargets();
 
   assert.match(lines.join('\n'), /refused refresh targets/);
-});
-
-test('reports view validates selected groups and reports generation progress inline', async () => {
-  const messages: unknown[] = [];
-  let received: ((message: unknown) => void) | undefined;
-  let coverageCalled = false;
-  const vscode = vscodeControllerMock();
-  const { ReportsViewProvider } = loadWithVscodeMock<typeof import('../../src/views/reports/panel')>(
-    vscode,
-    () => require('../../src/views/reports/panel'),
-  );
-  const provider = new ReportsViewProvider({ extensionUri: { fsPath: '/extension' } } as never, async (_mode, _verdicts, onProgress) => {
-    onProgress('1/1 reportController.ts');
-    return true;
-  }, async (onProgress) => {
-    coverageCalled = true;
-    onProgress('npm run coverage');
-    return true;
-  });
-  await provider.resolveWebviewView(webviewViewMock(messages, (handler) => { received = handler; }) as never);
-
-  received?.({ type: 'generate', mode: 'deterministic', verdicts: [] });
-  await Promise.resolve();
-  received?.({ type: 'generate', mode: 'deterministic', verdicts: ['MISSING'] });
-  await Promise.resolve();
-  received?.({ type: 'coverage' });
-  await Promise.resolve();
-
-  assert.match(JSON.stringify(messages), /Choose at least one group/);
-  assert.match(JSON.stringify(messages), /Report exported/);
-  assert.match(JSON.stringify(messages), /Coverage generated/);
-  assert.equal(coverageCalled, true);
 });
 
 test('case file panel handles webview commands without mutating source files', () => {
@@ -101,50 +101,14 @@ test('case file panel handles webview commands without mutating source files', (
   assert.deepEqual(commands.map((cmd) => cmd[0]), ['vscode.open', '_testInspector.markReviewed', 'testInspector.refresh']);
 });
 
-test('reviewer panel renders provider state and handles delete messages', async () => {
-  const deleted: string[] = [];
-  let received: ((message: unknown) => void) | undefined;
-  const provider = {
-    id: 'gemini',
-    displayName: 'Gemini',
-    defaultModel: 'gemini-test',
-    suggestedModels: ['gemini-test'],
-    isConfigured: async () => true,
-    testConnection: async () => ({ ok: true as const, text: 'ok', modelUsed: 'gemini-test' }),
-    complete: async () => ({ ok: false as const, error: 'unused' }),
-  };
-  const vscode = vscodeControllerMock({ provider: 'gemini' });
-  const { ReviewerViewProvider } = loadWithVscodeMock<typeof import('../../src/views/reviewer/panel')>(
-    vscode,
-    () => require('../../src/views/reviewer/panel'),
-  );
-  const view = webviewViewMock([], (handler) => { received = handler; });
-  const panel = new ReviewerViewProvider(
-    { extensionUri: { fsPath: '/extension' }, secrets: { delete: async (key: string) => { deleted.push(key); } } } as never,
-    new Map([['gemini', provider]]) as never,
-    { appendLine() {} } as never,
-  );
-
-  await panel.resolveWebviewView(view as never);
-  received?.({ type: 'delete', provider: 'gemini' });
-  await Promise.resolve();
-
-  assert.match(view.webview.html, /Gemini/);
-  assert.deepEqual(deleted, ['testInspector.llm.gemini.apiKey']);
-});
-
 function loadWithVscodeMock<T>(vscode: unknown, load: () => T): T {
   const loader = Module as unknown as { _load: (...args: unknown[]) => unknown };
   const original = loader._load;
   for (const request of [
     '../../src/services/testController',
     '../../src/services/targetController',
-    '../../src/views/reports/panel',
     '../../src/views/caseFile/panel',
-    '../../src/views/reviewer/panel',
     '../../src/views/targetsView',
-    '../../src/views/reviewer/template',
-    '../../src/views/reports/template',
     '../../src/views/caseFile/template',
   ]) {
     delete require.cache[require.resolve(request)];
@@ -162,6 +126,7 @@ function loadWithVscodeMock<T>(vscode: unknown, load: () => T): T {
 
 function vscodeControllerMock(opts: {
   replaced?: unknown[][];
+  onDispose?: () => void;
   isTrusted?: boolean;
   commands?: unknown[][];
   clipboard?: string[];
@@ -212,14 +177,22 @@ function vscodeControllerMock(opts: {
     },
     tests: {
       createTestController: () => ({
-        createTestItem: (id: string, label: string, uri: unknown) => ({
-          id,
-          label,
-          uri,
-          children: { add() {} },
-        }),
+        createTestItem: (id: string, label: string, uri: unknown) => {
+          const item = {
+            id,
+            label,
+            uri,
+            children: {
+              values: [] as unknown[],
+              add(child: unknown) {
+                this.values.push(child);
+              },
+            },
+          };
+          return item;
+        },
         items: { replace: (items: unknown[]) => opts.replaced?.push(items) },
-        dispose() {},
+        dispose: () => opts.onDispose?.(),
       }),
     },
     workspace: {

@@ -2,7 +2,7 @@
   "name": "test-inspector",
   "displayName": "Test Inspector",
   "description": "Local-first test detective for React, Vue, Flutter, Django, FastAPI, Firebase Functions, and Node.js — names which tests are theater, which are weak, and what's missing. The tool only informs; you fix.",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "publisher": "local",
   "engines": {
     "vscode": "^1.90.0"

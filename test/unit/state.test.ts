@@ -36,6 +36,41 @@ test('state drops stale project-scoped analysis when projects change', () => {
   assert.equal(state.selectedProjectId, null);
 });
 
+test('state preserves selected feature only while its project remains active', () => {
+  const state = new InspectorState();
+  const kept = projectFixture('node:/repo-a');
+  const removed = projectFixture('node:/repo-b');
+  state.featureAreas = [
+    { id: 'node:/repo-a:auth', projectId: kept.id, label: 'auth', rootPath: '/repo-a/src/auth', sourceFiles: [], testFiles: [], riskScore: 1, signals: [] },
+    { id: 'node:/repo-b:billing', projectId: removed.id, label: 'billing', rootPath: '/repo-b/src/billing', sourceFiles: [], testFiles: [], riskScore: 1, signals: [] },
+  ];
+  state.selectedFeatureId = 'node:/repo-b:billing';
+
+  state.setProjects([kept]);
+
+  assert.deepEqual(state.featureAreas.map((area) => area.id), ['node:/repo-a:auth']);
+  assert.equal(state.selectedFeatureId, null);
+});
+
+test('state replaces tests and nullable coverage by project', () => {
+  const state = new InspectorState();
+  const projectId = 'node:/repo-a';
+  state.testFiles = [
+    { path: '/repo-a/old.test.ts', projectId, status: 'unknown', testCases: [], qualityFindings: [] },
+    { path: '/repo-b/keep.test.ts', projectId: 'node:/repo-b', status: 'unknown', testCases: [], qualityFindings: [] },
+  ];
+  state.coverage = [
+    { projectId, files: [], totals: { linesPct: 70 } },
+    { projectId: 'node:/repo-b', files: [], totals: { linesPct: 80 } },
+  ];
+
+  state.setTests(projectId, [{ path: '/repo-a/new.test.ts', projectId, status: 'passed', testCases: [], qualityFindings: [] }]);
+  state.setCoverage(projectId, null);
+
+  assert.deepEqual(state.testFiles.map((file) => file.path), ['/repo-b/keep.test.ts', '/repo-a/new.test.ts']);
+  assert.deepEqual(state.coverage.map((summary) => summary.projectId), ['node:/repo-b']);
+});
+
 test('state de-duplicates notices and keeps newest bounded', () => {
   const state = new InspectorState();
 
@@ -48,6 +83,15 @@ test('state de-duplicates notices and keeps newest bounded', () => {
   assert.equal(state.notices.length, 30);
   assert.equal(state.notices[0].message, 'notice 34');
   assert.equal(state.notices.filter((notice) => notice.message === 'same').length, 0);
+});
+
+test('state clearNotices removes accumulated notices', () => {
+  const state = new InspectorState();
+  state.addNotice({ severity: 'error', message: 'coverage failed', detail: 'exit 1' });
+
+  state.clearNotices();
+
+  assert.deepEqual(state.notices, []);
 });
 
 function projectFixture(id: string): TestProject {

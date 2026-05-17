@@ -234,7 +234,6 @@ export function activate(context: vscode.ExtensionContext): void {
   registerCommand('testInspector.configureLlm', () => configureLlm(context, output));
   registerCommand('testInspector.runCurrentFile', () => runCurrentFile());
   registerCommand('testInspector.generateCoverage', () => generateCoverage());
-  registerCommand('testInspector.exportCaseFile', () => reportsView.focus());
   registerCommand('testInspector.generateReport', () => reportsView.focus());
   registerCommand('_testInspector.markReviewed', async (filePath?: unknown) => {
     if (typeof filePath !== 'string') return;

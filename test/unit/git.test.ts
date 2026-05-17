@@ -42,6 +42,44 @@ test('changed-file risks add missing-test and missing-coverage findings when evi
   assert.equal(risks[0]!.recommendedCommand, 'npm test -- --findRelatedTests src/payments.ts');
 });
 
+test('changed-file risks recommend framework commands and handle unknown owners', () => {
+  const risks = buildChangedFileRisks(
+    ['/repo/lib/auth.dart', '/repo/app/views.py', '/outside/file.ts'],
+    [
+      projectFixture('/repo', 'flutter:/repo', 'flutter'),
+      projectFixture('/repo/app', 'django:/repo/app', 'django'),
+    ],
+    [
+      testFile('/repo/test/auth_test.dart', 'flutter:/repo'),
+      testFile('/repo/app/tests/test_views.py', 'django:/repo/app'),
+    ],
+    [],
+    [],
+  );
+
+  assert.equal(risks.find((risk) => risk.path.endsWith('auth.dart'))?.recommendedCommand, 'flutter test test/auth_test.dart');
+  assert.equal(risks.find((risk) => risk.path.endsWith('views.py'))?.recommendedCommand, 'pytest tests/test_views.py');
+  assert.equal(risks.find((risk) => risk.path === '/outside/file.ts')?.recommendedCommand, undefined);
+});
+
+test('changed-file risks fall back to project-wide commands when related tests are absent', () => {
+  const risks = buildChangedFileRisks(
+    ['/repo/lib/cart.dart', '/repo/app/api.py', '/repo/src/server.ts'],
+    [
+      projectFixture('/repo/lib', 'flutter:/repo/lib', 'flutter'),
+      projectFixture('/repo/app', 'fastapi:/repo/app', 'fastapi'),
+      projectFixture('/repo/src', 'node:/repo/src', 'node'),
+    ],
+    [],
+    [],
+    [],
+  );
+
+  assert.equal(risks.find((risk) => risk.projectId === 'flutter:/repo/lib')?.recommendedCommand, 'flutter test');
+  assert.equal(risks.find((risk) => risk.projectId === 'fastapi:/repo/app')?.recommendedCommand, 'pytest');
+  assert.equal(risks.find((risk) => risk.projectId === 'node:/repo/src')?.recommendedCommand, 'npm test');
+});
+
 test('changed-file detection reads git diff/status, supports renames, and filters non-source files', async () => {
   const { getChangedFiles, calls } = loadGitWithExecMock({
     diff: 'src/api.ts\nREADME.md\n',

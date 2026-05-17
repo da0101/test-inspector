@@ -97,10 +97,13 @@ function findWeakAssertions(project: TestProject, filePath: string, text: string
     if (!hasJsAssertion(text)) {
       return [finding(project, 'no-assertion', 'warning', filePath, 'No obvious assertion found in this test file.')];
     }
-    const snapshotRegex = /\btoMatch(?:Inline)?Snapshot\s*\(/;
-    if ((project.framework === 'react' || project.framework === 'firebase-functions') && snapshotRegex.test(code)) {
-      const withoutSnapshots = code.replace(snapshotRegex, '');
-      if (!/\bexpect\s*\(|\bassert(?:\s*\(|\s*\.)|\bscreen\.(?:get|find|query)By/.test(withoutSnapshots)) {
+    const snapshotAssertions = (code.match(/\btoMatch(?:Inline)?Snapshot\s*\(/g) ?? []).length;
+    if ((project.framework === 'react' || project.framework === 'firebase-functions') && snapshotAssertions > 0) {
+      const expectCount = (code.match(/\bexpect\s*\(/g) ?? []).length;
+      const hasNonSnapshotAssertion =
+        expectCount > snapshotAssertions ||
+        /\bassert(?:\s*\(|\s*\.)|\bscreen\.(?:get|find|query)By/.test(code);
+      if (!hasNonSnapshotAssertion) {
         return [finding(project, 'snapshot-only', 'warning', filePath, 'Test file appears to rely only on snapshots.')];
       }
     }
@@ -129,7 +132,7 @@ function findTestSmells(project: TestProject, filePath: string, text: string): Q
 
   const findings: QualityFinding[] = [];
   const code = maskJsCode(text);
-  const hasLocalImport = hasLocalJsImport(text);
+  const hasLocalImport = hasLocalJsImport(text) || readsLocalProjectContract(text);
   if (!hasLocalImport) {
     findings.push(
       finding(
@@ -177,6 +180,14 @@ function findTestSmells(project: TestProject, filePath: string, text: string): Q
   }
 
   return findings;
+}
+
+function readsLocalProjectContract(text: string): boolean {
+  return (
+    /\breadFileSync\s*\(\s*['"](?:\.\/)?package\.json['"]/.test(text) ||
+    /\breadFile\s*\(\s*['"](?:\.\/)?package\.json['"]/.test(text) ||
+    /\brequire\s*\(\s*['"](?:\.\/)?package\.json['"]\s*\)/.test(text)
+  );
 }
 
 function finding(

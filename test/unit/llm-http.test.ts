@@ -51,6 +51,34 @@ test('llm-http · sends POST body and content length when body is present', asyn
   assert.equal(captured[0]!.options.headers['Content-Length'], String(Buffer.byteLength(body)));
 });
 
+test('llm-http · preserves caller supplied content length and omits writes without a body', async () => {
+  const captured: CapturedRequest[] = [];
+  const { httpRequest: request } = loadWithHttpMock({
+    status: 204,
+    body: [],
+    captured,
+  });
+
+  await request({ method: 'POST', url: 'http://localhost/test', headers: { 'Content-Length': 'already-set' }, timeoutMs: 1000 });
+
+  assert.equal(captured[0]!.writtenBody, '');
+  assert.equal(captured[0]!.options.headers['Content-Length'], 'already-set');
+});
+
+test('llm-http · abort signal destroys the pending request', async () => {
+  const controller = new AbortController();
+  const { httpRequest: request } = loadWithHttpMock({
+    status: 200,
+    body: ['late'],
+    deferEnd: true,
+  });
+
+  const pending = request({ method: 'GET', url: 'http://localhost/test', headers: {}, timeoutMs: 1000, abortSignal: controller.signal });
+  controller.abort();
+
+  await assert.rejects(pending, /aborted/);
+});
+
 test('llm-http · accepts https:// URLs (validation passes; connection may fail but not on the protocol guard)', async () => {
   await assert.rejects(
     httpRequest({ method: 'GET', url: 'https://127.0.0.1:1/never-listens', headers: {}, timeoutMs: 100 }),
@@ -74,7 +102,7 @@ type CapturedRequest = {
   writtenBody: string;
 };
 
-function loadWithHttpMock(opts: { status: number; body: string[]; captured?: CapturedRequest[] }): typeof import('../../src/services/llm/http') {
+function loadWithHttpMock(opts: { status: number; body: string[]; captured?: CapturedRequest[]; deferEnd?: boolean }): typeof import('../../src/services/llm/http') {
   const loader = Module as unknown as { _load: (...args: unknown[]) => unknown };
   const original = loader._load;
   const resolved = require.resolve('../../src/services/llm/http');
@@ -93,6 +121,7 @@ function loadWithHttpMock(opts: { status: number; body: string[]; captured?: Cap
       };
       req.destroy = (err: Error) => req.emit('error', err);
       req.end = () => {
+        if (opts.deferEnd) return;
         const res = new EventEmitter() as EventEmitter & { statusCode: number; setEncoding: () => void };
         res.statusCode = opts.status;
         res.setEncoding = () => {};

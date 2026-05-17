@@ -23,7 +23,7 @@ export function renderKpiTile(verdict: CaseVerdict, count: number, total: number
     ? 'Strong test files'
     : verdict === 'MISSING'
       ? 'Missing source files'
-      : VERDICT_LABEL[verdict];
+      : `${VERDICT_LABEL[verdict]} case cards`;
   const tooltip = verdict === 'THEATER'
     ? 'Test files that appear to pass without proving real behavior, such as trivial or self-mocking tests.'
     : verdict === 'WEAK'
@@ -42,7 +42,7 @@ export function renderKpiTile(verdict: CaseVerdict, count: number, total: number
         <span class="kpi-blurb">
           <span class="kpi-blurb-text">${VERDICT_BLURB[verdict]}</span>
           <span class="kpi-blurb-sep" data-sep>${total > 0 ? '·' : ''}</span>
-          <span class="kpi-blurb-pct" data-pct>${total > 0 ? share + '%' : ''}</span>
+          <span class="kpi-blurb-pct" data-pct>${total > 0 ? share + '% of cards' : ''}</span>
         </span>
       </span>
     </button>

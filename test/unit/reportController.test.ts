@@ -33,6 +33,39 @@ test('report controller writes a deterministic report for selected verdict group
   assert.doesNotMatch(writes[0]!.content, /Strong test/);
 });
 
+test('report controller defaults report save path to the scanned worktree', async () => {
+  const defaultUris: string[] = [];
+  const { generateCaseFileReportForSelection } = loadWithVscodeMock<typeof import('../../src/services/reportController')>(
+    '../../src/services/reportController',
+    vscodeMock({
+      savePath: '/external/repo/test-inspector-deterministic-report.md',
+      provider: 'none',
+      defaultUris,
+    }),
+  );
+
+  const written = await generateCaseFileReportForSelection({
+    bundle: {
+      ...bundleFixture(),
+      scope: {
+        repoName: 'external',
+        repoPath: '/external/repo',
+        worktreePath: '/external/repo',
+        branch: 'main',
+        featureLabel: 'All features',
+      },
+    },
+    workspaceRoot: '/host/test-inspector',
+    registry: new Map(),
+    output: outputMock(),
+    mode: 'deterministic',
+    verdicts: ['MISSING'],
+  });
+
+  assert.equal(written, true);
+  assert.deepEqual(defaultUris, ['/external/repo/test-inspector-deterministic-report.md']);
+});
+
 test('report controller rejects AI reports when no reviewer is configured', async () => {
   const { generateCaseFileReportForSelection } = loadWithVscodeMock<typeof import('../../src/services/reportController')>(
     '../../src/services/reportController',
@@ -191,12 +224,16 @@ function vscodeMock(opts: {
   writeError?: Error;
   quickPickResults?: unknown[];
   infoMessages?: string[];
+  defaultUris?: string[];
 }) {
   const quickPicks = [...(opts.quickPickResults ?? [])];
   return {
     Uri: { file: (fsPath: string) => ({ fsPath }) },
     window: {
-      showSaveDialog: async () => opts.savePath ? { fsPath: opts.savePath } : undefined,
+      showSaveDialog: async (dialogOpts: { defaultUri?: { fsPath: string } }) => {
+        if (dialogOpts.defaultUri) opts.defaultUris?.push(dialogOpts.defaultUri.fsPath);
+        return opts.savePath ? { fsPath: opts.savePath } : undefined;
+      },
       showInformationMessage: async (message: string) => opts.infoMessages?.push(message),
       showQuickPick: async () => quickPicks.shift(),
     },

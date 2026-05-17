@@ -24,9 +24,9 @@ export const VERDICT_ORDER: CaseVerdict[] = ['THEATER', 'WEAK', 'MISSING', 'STRO
 
 export const VERDICT_BLURB: Record<CaseVerdict, string> = {
   THEATER: 'pass without proving anything',
-  WEAK: 'one weak signal each',
+  WEAK: 'needs stronger proof',
   MISSING: 'critical code with no tests',
-  STRONG: 'doing their job',
+  STRONG: 'no weak signals',
   OK: 'no issues',
 };
 

@@ -5,7 +5,7 @@ status: active
 repo_ids: [repo-primary]
 related_domain_slugs: [test-discovery, changed-files, coverage, quality, risk-scoring, investigation, dashboard]
 created_at: 2026-05-16
-updated_at: 2026-05-16
+updated_at: 2026-05-17
 ---
 
 # workspace-scope
@@ -40,6 +40,8 @@ Workspace scope lets Test Inspector analyze the right existing checkout and the 
 - Tree views should respect the selected scope when showing cases and entry points.
 - Reviewer/LLM output should include the active scope in prompts and evidence, but it must not allow the LLM to alter scores.
 - Reports should state which branch/worktree and feature scope were analyzed.
+- Report save defaults follow the selected scan target's worktree path. In centralized-host workflows, reports for an external repo must not default into the Test Inspector source repo.
+- The Reports sidebar owns deterministic/AI mode selection, group selection, and coverage generation entry points so users do not have to leave the Test Inspector activity-bar workflow.
 
 ## API contract locked
 
@@ -52,18 +54,29 @@ Workspace scope lets Test Inspector analyze the right existing checkout and the 
 - Forbidden product commands include `git worktree add`, `git worktree remove`, `git switch`, `git checkout`, `git stash`, `git commit`, `git merge`, `git rebase`, and branch creation/deletion.
 - Allowed Git commands are read-only discovery commands such as `rev-parse`, `branch --show-current`, `worktree list --porcelain`, `status --porcelain`, `diff --name-only`, and related file-inspection commands.
 - Safe command execution still applies: Git commands must use `execFile` or `spawn` with argument arrays, never shell strings.
+- Coverage commands must come from explicit adapter/project configuration. If no explicit coverage command exists, show a setup blocker instead of inventing one.
+- Generated report artifacts are local output, not source. `test-inspector-deterministic-report.md` and `test-inspector-ai-report.md` should stay ignored/untracked.
 
 ## Key files
 
 - `src/models.ts`
 - `src/extension.ts`
 - `src/services/changedFiles.ts`
+- `src/services/workspaceCatalog.ts`
+- `src/services/trackedRepos.ts`
+- `src/services/targetController.ts`
+- `src/services/featureScope.ts`
+- `src/services/reportController.ts`
+- `src/services/coverageController.ts`
 - `src/services/investigator.ts`
 - `src/services/quality.ts`
 - `src/services/sourceRisk.ts`
 - `src/views/caseFile/panel.ts`
 - `src/views/caseFile/template.ts`
 - `src/views/caseFile/template/render.ts`
+- `src/views/reports/panel.ts`
+- `src/views/reports/template.ts`
+- `src/views/targetsView.ts`
 - `src/views/casesView.ts`
 - `src/views/testTree.ts`
 - `package.json`
@@ -77,3 +90,4 @@ Workspace scope lets Test Inspector analyze the right existing checkout and the 
 - Feature targeting starts with local deterministic evidence: branch diff, touched files, path/name hints, imports, test references, and coverage paths.
 - LLM-assisted scope description is optional and additive only.
 - Case File must make the active scope obvious so users do not confuse scoped results with whole-app results.
+- Dogfood reports are part of the release gate: after coverage, the deterministic report should have no obvious false positives before this domain is considered reliable.

@@ -41,7 +41,7 @@ export function renderCaseFileHtml(bundle: CaseFileBundle, opts: RenderOptions):
     ? `<span class="hidden-note">· ${bundle.hiddenReviewedCount} hidden (reviewed)</span>`
     : '';
   const subtitle = total > 0
-    ? `<span id="counter">${total} case${total === 1 ? '' : 's'}</span>
+    ? `<span id="counter">${total} case card${total === 1 ? '' : 's'}</span>
        ${hiddenNote}
        <button id="clear-filters" class="clear-link" type="button">Clear filters</button>`
     : `<span id="counter">No cases yet</span>${hiddenNote}`;
@@ -114,14 +114,15 @@ function renderMetricGuide(): string {
     <details class="metric-guide">
       <summary>Metric guide</summary>
       <div class="metric-guide-grid">
-        <div><strong>Test files</strong><span>Files inspected for test-quality signals.</span></div>
-        <div><strong>Test cases</strong><span>Individual tests discovered; after Generate Coverage, passing/total from the successful run.</span></div>
+        <div><strong>Case cards</strong><span>Actionable findings shown below. One card can represent a test file or a source file.</span></div>
+        <div><strong>Test files</strong><span>Actual test files discovered and inspected for quality signals.</span></div>
+        <div><strong>Test cases</strong><span>Individual test declarations discovered; after Generate Coverage, passing/total from the successful run.</span></div>
         <div><strong>Lines</strong><span>Executable source lines hit by tests.</span></div>
         <div><strong>Branches</strong><span>Decision paths hit by tests, when reported.</span></div>
         <div><strong>Functions</strong><span>Functions hit by tests, when reported.</span></div>
         <div><strong>Strong test files</strong><span>Test files with no static weak/theater signals; not executed test count.</span></div>
         <div><strong>Missing source files</strong><span>Critical source files with no related test evidence or effectively no coverage.</span></div>
-        <div><strong>Theater / Weak</strong><span>Passing-looking tests with fake, shallow, or fragile evidence.</span></div>
+        <div><strong>Theater / Weak</strong><span>Case cards with fake, shallow, fragile, or low-coverage evidence.</span></div>
       </div>
     </details>
   `;

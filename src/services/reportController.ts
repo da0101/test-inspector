@@ -67,7 +67,7 @@ export async function generateCaseFileReportForSelection(opts: {
   }
 
   const targetUri = await vscode.window.showSaveDialog({
-    defaultUri: defaultReportUri(opts.workspaceRoot, opts.mode),
+    defaultUri: defaultReportUri(opts.bundle, opts.workspaceRoot, opts.mode),
     filters: { Markdown: ['md'] }
   });
   if (!targetUri) return false;
@@ -198,8 +198,17 @@ async function readRelatedContent(caseFile: CaseFile, bundle: CaseFileBundle): P
   return relatedContent;
 }
 
-function defaultReportUri(workspaceRoot: string | undefined, mode: CaseFileReportMode): vscode.Uri | undefined {
-  if (!workspaceRoot) return undefined;
+function defaultReportUri(bundle: CaseFileBundle, workspaceRoot: string | undefined, mode: CaseFileReportMode): vscode.Uri | undefined {
+  const root = defaultReportRoot(bundle, workspaceRoot);
+  if (!root) return undefined;
   const suffix = mode === 'ai' ? 'ai-report' : 'deterministic-report';
-  return vscode.Uri.file(path.join(workspaceRoot, `test-inspector-${suffix}.md`));
+  return vscode.Uri.file(path.join(root, `test-inspector-${suffix}.md`));
+}
+
+function defaultReportRoot(bundle: CaseFileBundle, workspaceRoot: string | undefined): string | undefined {
+  if (bundle.scope?.worktreePath) return bundle.scope.worktreePath;
+  const projects = bundle.projects ?? (bundle.project ? [bundle.project] : []);
+  const roots = new Set(projects.map((project) => project.workspacePath ?? project.rootPath).filter(Boolean).map((root) => path.resolve(root)));
+  if (roots.size === 1) return [...roots][0];
+  return workspaceRoot;
 }

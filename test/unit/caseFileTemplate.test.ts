@@ -15,10 +15,12 @@ test('case file template renders scope, KPI tiles, tabs, and escaped case conten
   assert.match(html, /78\.1%/);
   assert.match(html, /65%/);
   assert.match(html, /coverage run passed/);
+  assert.match(html, /1 case card/);
   assert.match(html, /Number of test files Test Inspector discovered/);
   assert.match(html, /Percentage of executable source lines hit by unit tests/);
   assert.match(html, /Metric guide/);
-  assert.match(html, /Files inspected for test-quality signals/);
+  assert.match(html, /Actionable findings shown below/);
+  assert.match(html, /Actual test files discovered/);
   assert.match(html, /not executed test count/);
   assert.match(html, /Suggested test gaps/);
   assert.match(html, /core behavior is effectively untested/);
@@ -34,7 +36,8 @@ test('case file render helpers keep active and disabled states machine-readable'
   assert.match(renderKpiTile('MISSING', 2, 4), /Critical source files where Test Inspector found no related test evidence/);
   assert.match(renderKpiTile('STRONG', 2, 4), /Strong test files/);
   assert.match(renderKpiTile('STRONG', 2, 4), /file quality, not executed test-case count/);
-  assert.match(renderKpiTile('MISSING', 2, 4), /50%/);
+  assert.match(renderKpiTile('WEAK', 2, 4), /Weak case cards/);
+  assert.match(renderKpiTile('MISSING', 2, 4), /50% of cards/);
   assert.match(renderTab({ projectId: '*', label: 'All', count: 1, active: true }), /aria-selected="true"/);
   assert.match(renderCase(caseFixture(), bundleFixture().projects![0]), /Open file/);
 });

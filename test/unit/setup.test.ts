@@ -35,6 +35,26 @@ test('does not report missing coverage script when coverage command is detected'
   }
 });
 
+test('does not report missing coverage file once coverage has been read', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'test-inspector-setup-covered-'));
+  try {
+    const project = projectFixture(root, { coverageCommand: 'npm run coverage' });
+    await mkdir(path.join(root, 'node_modules'));
+    await writeFile(path.join(root, 'package.json'), JSON.stringify({ scripts: { test: 'jest', coverage: 'jest --coverage' }, devDependencies: { jest: '^29.0.0' } }));
+
+    const issues = await analyzeSetupIssues(
+      [project],
+      [testFileFixture(project.id)],
+      [{ projectId: project.id, files: [], totals: { linesPct: 100 } }],
+    );
+
+    assert.equal(issues.some((issue) => issue.kind === 'missing-coverage-file'), false);
+    assert.equal(issues.some((issue) => issue.kind === 'missing-node-modules'), false);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test('flags missing node_modules separately from test quality', async () => {
   const root = await mkdtemp(path.join(tmpdir(), 'test-inspector-setup-'));
   try {
@@ -81,6 +101,52 @@ test('does not flag missing node_modules when package has no dependencies', asyn
     const issues = await analyzeSetupIssues([project], [testFileFixture(project.id)], []);
 
     assert.equal(issues.some((issue) => issue.kind === 'missing-node-modules'), false);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test('setup issues stay empty for non-JavaScript projects with tests and no coverage command', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'test-inspector-setup-python-'));
+  try {
+    const project = projectFixture(root, {
+      id: 'fastapi:test',
+      framework: 'fastapi',
+      label: 'FastAPI app',
+      testCommand: 'pytest',
+    });
+
+    const issues = await analyzeSetupIssues([project], [testFileFixture(project.id)], []);
+
+    assert.deepEqual(issues, []);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test('setup missing node_modules action uses root folder when workspace path is dot', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'test-inspector-setup-root-workspace-'));
+  try {
+    const project = projectFixture(root, { workspacePath: '.' });
+    await writeFile(path.join(root, 'package.json'), JSON.stringify({ scripts: { test: 'node --test' }, dependencies: { leftpad: '^1.0.0' } }));
+
+    const issues = await analyzeSetupIssues([project], [testFileFixture(project.id)], []);
+
+    assert.match(issues.find((issue) => issue.kind === 'missing-node-modules')?.action ?? '', new RegExp(path.basename(root)));
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test('setup missing node_modules action uses package workspace path when present', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'test-inspector-setup-workspace-path-'));
+  try {
+    const project = projectFixture(root, { workspacePath: 'packages/api' });
+    await writeFile(path.join(root, 'package.json'), JSON.stringify({ scripts: { test: 'node --test' }, dependencies: { express: '^4.0.0' } }));
+
+    const issues = await analyzeSetupIssues([project], [testFileFixture(project.id)], []);
+
+    assert.match(issues.find((issue) => issue.kind === 'missing-node-modules')?.action ?? '', /packages\/api/);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

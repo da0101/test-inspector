@@ -48,6 +48,29 @@ test('llm registry passes provider-specific base URL overrides into provider con
   ]);
 });
 
+test('llm registry falls back to provider defaults when model and base URLs are blank', async () => {
+  const { createProviderRegistry } = loadRegistryWithVscodeMock({
+    model: '',
+    openaiBaseUrl: '',
+    claudeBaseUrl: '',
+    geminiBaseUrl: '',
+  });
+  const registry = createProviderRegistry(secretsMock('key') as never);
+  const results: string[] = [];
+
+  for (const [id, provider] of registry) {
+    const response = await provider.complete({ system: '', user: '' });
+    assert.equal(response.ok, true);
+    if (response.ok) results.push(`${id}:${response.text}`);
+  }
+
+  assert.deepEqual(results, [
+    'openai:gpt-4o-mini:',
+    'claude:claude-3-5-haiku-latest:',
+    'gemini:gemini-2.5-flash:',
+  ]);
+});
+
 function loadRegistryWithVscodeMock(settings: Record<string, unknown>): typeof import('../../src/services/llm/registry') {
   const loader = Module as unknown as { _load: (...args: unknown[]) => unknown };
   const original = loader._load;
