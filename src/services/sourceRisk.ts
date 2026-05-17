@@ -3,6 +3,7 @@ import { promises as fs } from 'fs';
 import { CoverageSummary, QualityFinding, SourceFileRisk, TestFile, TestProject } from '../models';
 import { walkFiles } from '../utils/fs';
 import { basenameWithoutKnownExtensions, isSourceFile, normalizePath } from '../utils/path';
+import { buildRelatedTestsByImportGraph } from './importGraph';
 import { isRelevantSource } from './sourceRiskFilters';
 
 export async function analyzeSourceRisks(
@@ -12,7 +13,7 @@ export async function analyzeSourceRisks(
 ): Promise<SourceFileRisk[]> {
   const risks: SourceFileRisk[] = [];
   for (const project of projects) {
-    const relatedByImport = await buildImportMap(project, tests);
+    const relatedByImport = await buildRelatedTestsByImportGraph(project, tests);
     const sourceFiles = await walkFiles(project.rootPath, {
       include: (filePath) => isSourceFile(filePath) && isRelevantSource(project, filePath)
     });
@@ -133,71 +134,6 @@ function featureParts(project: TestProject, dir: string, kind: 'source' | 'test'
     }
   }
   return parts;
-}
-
-async function buildImportMap(project: TestProject, tests: TestFile[]): Promise<Map<string, string[]>> {
-  const map = new Map<string, string[]>();
-  for (const test of tests.filter((item) => item.projectId === project.id)) {
-    const text = await fs.readFile(test.path, 'utf8').catch(() => '');
-    for (const specifier of importSpecifiers(text)) {
-      const resolved = await resolveImport(project, test.path, specifier);
-      if (!resolved) {
-        continue;
-      }
-      const existing = map.get(resolved) ?? [];
-      existing.push(test.path);
-      map.set(resolved, existing);
-    }
-  }
-  return map;
-}
-
-function importSpecifiers(text: string): string[] {
-  const specifiers: string[] = [];
-  const patterns = [
-    /\bimport\s+(?:[^'"]+\s+from\s+)?['"]([^'"]+)['"]/g,
-    /\brequire\s*\(\s*['"]([^'"]+)['"]\s*\)/g
-  ];
-  for (const pattern of patterns) {
-    let match: RegExpExecArray | null;
-    while ((match = pattern.exec(text))) {
-      if (match[1].startsWith('.') || match[1].startsWith('@/')) {
-        specifiers.push(match[1]);
-      }
-    }
-  }
-  return specifiers;
-}
-
-async function resolveImport(project: TestProject, fromFile: string, specifier: string): Promise<string | null> {
-  const base =
-    specifier.startsWith('@/')
-      ? path.join(project.rootPath, 'src', specifier.slice(2))
-      : path.resolve(path.dirname(fromFile), specifier);
-  const candidates = [
-    base,
-    `${base}.ts`,
-    `${base}.tsx`,
-    `${base}.js`,
-    `${base}.jsx`,
-    `${base}.py`,
-    `${base}.dart`,
-    path.join(base, 'index.ts'),
-    path.join(base, 'index.tsx'),
-    path.join(base, 'index.js'),
-    path.join(base, 'index.jsx')
-  ];
-  for (const candidate of candidates) {
-    try {
-      const stat = await fs.stat(candidate);
-      if (stat.isFile() && isSourceFile(candidate)) {
-        return candidate;
-      }
-    } catch {
-      // try next candidate
-    }
-  }
-  return null;
 }
 
 function profileSource(project: TestProject, relPath: string, text: string): { criticality: number; signals: string[] } {

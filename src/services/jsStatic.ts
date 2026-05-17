@@ -102,25 +102,36 @@ export function hasJsAssertion(text: string): boolean {
 }
 
 export function hasLocalJsImport(text: string): boolean {
+  return jsModuleSpecifiers(text).some((specifier) => specifier.startsWith('.') || specifier.startsWith('@/'));
+}
+
+export function jsModuleSpecifiers(text: string): string[] {
+  const specifiers: string[] = [];
   const masked = maskJsCode(text);
-  const importRegex = /\bimport\b/g;
+  const importExportRegex = /\b(?:import|export)\b/g;
   let match: RegExpExecArray | null;
-  while ((match = importRegex.exec(masked))) {
+  while ((match = importExportRegex.exec(masked))) {
     const statementEnd = statementBoundary(masked, match.index);
     const statement = text.slice(match.index, statementEnd);
-    if (/\bfrom\s+['"](?:\.|@\/)/.test(statement) || /\bimport\s+['"](?:\.|@\/)/.test(statement)) {
-      return true;
+    const from = /\bfrom\s+['"]([^'"]+)['"]/.exec(statement);
+    if (from?.[1]) {
+      specifiers.push(from[1]);
+      continue;
+    }
+    const sideEffect = /\bimport\s+['"]([^'"]+)['"]/.exec(statement);
+    if (sideEffect?.[1]) {
+      specifiers.push(sideEffect[1]);
     }
   }
   const requireRegex = /\brequire\s*\(/g;
   while ((match = requireRegex.exec(masked))) {
     const openIndex = masked.indexOf('(', match.index);
     const specifier = readFirstStringArgument(text, openIndex + 1);
-    if (specifier?.startsWith('.') || specifier?.startsWith('@/')) {
-      return true;
+    if (specifier) {
+      specifiers.push(specifier);
     }
   }
-  return false;
+  return specifiers;
 }
 
 function readFirstStringArgument(text: string, start: number): string | null {

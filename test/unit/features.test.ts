@@ -119,3 +119,43 @@ test('ignores low-behavior template style files when ranking source risks', asyn
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test('treats barrel-imported source files as indirectly related to tests', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'test-inspector-barrel-risk-'));
+  try {
+    await mkdir(path.join(root, 'src', 'adapters'), { recursive: true });
+    await mkdir(path.join(root, 'src', 'services'), { recursive: true });
+    await mkdir(path.join(root, 'test', 'unit'), { recursive: true });
+    await writeFile(
+      path.join(root, 'src', 'adapters', 'react.ts'),
+      "export class ReactAdapter { async detectProjects() { if (true) return ['react']; } }\n"
+    );
+    await writeFile(
+      path.join(root, 'src', 'adapters', 'index.ts'),
+      "import { ReactAdapter } from './react';\nexport function createAdapters() { return [new ReactAdapter()]; }\n"
+    );
+    await writeFile(
+      path.join(root, 'src', 'services', 'reportController.ts'),
+      "export async function generateReport() { if (true) return fetch('/api/report'); }\n"
+    );
+    const testPath = path.join(root, 'test', 'unit', 'adapters.test.ts');
+    await writeFile(
+      testPath,
+      "import assert from 'node:assert/strict';\nimport { createAdapters } from '../../src/adapters';\ntest('creates adapters', () => { assert.equal(createAdapters().length, 1); });\n"
+    );
+
+    const project = { id: `node:${root}`, rootPath: root, framework: 'node' as const, label: 'Node.js project', configFiles: [] };
+    const risks = await analyzeSourceRisks(
+      [project],
+      [{ path: testPath, projectId: project.id, status: 'unknown', testCases: [], qualityFindings: [] }],
+      []
+    );
+
+    assert.deepEqual(
+      risks.map((risk) => path.relative(root, risk.path)),
+      ['src/services/reportController.ts']
+    );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});

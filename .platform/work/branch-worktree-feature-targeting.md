@@ -66,14 +66,16 @@ _Append-only. Format: `YYYY-MM-DD — <decision> — <rationale>`_
 ## Resume state
 _Overwritten by `ab checkpoint` — the compact payload the next agent reads first. Keep this block under ~10 lines._
 
-- **Last updated:** 2026-05-16 by danilulmashev (auto)
-- **What just happened:** Committed worktree-scoped reporting and Node.js analyzer reliability hardening. npm test passes 81/81.
+- **Last updated:** 2026-05-16 by danilulmashev
+- **What just happened:** Added import-graph source-risk reliability: barrel and entrypoint imports now provide indirect related-test evidence; dogfood Missing dropped from 36 to 19 while Theater/Weak stayed 0; npm test passes 82/82.
 - **Current focus:** —
-- **Next action:** Plan the source-risk reliability layer: direct vs indirect coverage, barrel-export tracing, and Missing-card confidence levels.
+- **Next action:** Regenerate deterministic report in the Extension Host and review the remaining 19 Missing cards for controller/UI coverage strategy.
 - **Blockers:** none
 
 ## Progress log
 _Append-only. `ab checkpoint` prepends a dated line and auto-trims to the last 10 entries. Format: `YYYY-MM-DD HH:MM — <what happened>`._
+
+2026-05-16 23:26 — Added import-graph source-risk reliability: barrel and entrypoint imports now provide indirect related-test evidence; dogfood Missing dropped from 36 to 19 while Theater/Weak stayed 0; npm test passes 82/82.
 
 2026-05-16 23:11 — Hardened Node.js analyzer reliability after dogfooding: no fixture leakage, no string-fixture pseudo-tests, node:assert methods recognized, multiline imports handled, low-behavior source noise reduced. npm test passes 81/81.
 
