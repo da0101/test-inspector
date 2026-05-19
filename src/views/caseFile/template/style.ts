@@ -55,6 +55,11 @@ export const STYLE = `
   * { box-sizing: border-box; }
   html { scroll-behavior: smooth; }
 
+  html, body {
+    overflow-x: hidden;
+    width: 100%;
+  }
+
   body {
     font-family: var(--vscode-font-family);
     font-size: var(--type-base);
@@ -70,9 +75,9 @@ export const STYLE = `
     padding: var(--space-5) var(--space-6) 0;
     background: var(--surface);
     border-bottom: 1px solid var(--border);
-    position: sticky;
-    top: 0;
-    z-index: 10;
+  }
+  @media (max-width: 560px) {
+    .hero { padding: var(--space-3) var(--space-3) 0; }
   }
   .hero-title {
     font-size: var(--type-xl);
@@ -178,6 +183,9 @@ export const STYLE = `
   @media (max-width: 560px) {
     .runtime-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
+  @media (max-width: 360px) {
+    .runtime-strip { grid-template-columns: 1fr; }
+  }
   .runtime-metric,
   .runtime-note {
     min-width: 0;
@@ -208,33 +216,21 @@ export const STYLE = `
     text-align: center;
   }
 
-  .metric-guide {
-    margin: calc(-1 * var(--space-2)) 0 var(--space-4);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    background: var(--surface-elevated);
-  }
-  .metric-guide summary {
-    cursor: pointer;
-    padding: 6px 10px;
-    color: var(--vscode-textLink-foreground);
-    font-size: var(--type-xs);
+  /* Guide panel (shown when Guide tab is active, lives inside main) */
+  .guide-panel[hidden] { display: none; }
+  .guide-heading {
+    font-size: var(--type-lg);
     font-weight: 600;
-    user-select: none;
+    margin: 0 0 var(--space-4);
+    letter-spacing: -0.005em;
   }
-  .metric-guide summary:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
-  }
+
   .metric-guide-grid {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: var(--space-2);
-    padding: 0 10px 10px;
+    gap: var(--space-3);
   }
-  .metric-guide-grid div {
-    min-width: 0;
-  }
+  .metric-guide-grid div { min-width: 0; }
   .metric-guide-grid strong,
   .metric-guide-grid span {
     display: block;
@@ -265,6 +261,9 @@ export const STYLE = `
   @media (max-width: 720px) {
     .kpi-strip { grid-template-columns: repeat(2, 1fr); }
   }
+  @media (max-width: 400px) {
+    .kpi-strip { grid-template-columns: 1fr; }
+  }
 
   .kpi {
     display: flex;
@@ -278,6 +277,8 @@ export const STYLE = `
     font-family: inherit;
     text-align: left;
     cursor: pointer;
+    min-width: 0;
+    width: 100%;
     transition: background var(--transition), border-color var(--transition), box-shadow var(--transition), opacity var(--transition);
     box-shadow: var(--elev-1);
   }
@@ -341,6 +342,9 @@ export const STYLE = `
   main {
     padding: var(--space-4) var(--space-6) var(--space-8);
     max-width: 920px;
+  }
+  @media (max-width: 560px) {
+    main { padding: var(--space-3) var(--space-3) var(--space-6); }
   }
 
   .case {
@@ -653,6 +657,53 @@ export const STYLE = `
   .ai-uncertainty {
     color: var(--c-weak);
   }
+
+  /* Coverage error banner */
+  .coverage-error {
+    margin: 0 0 var(--space-4);
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid rgba(245, 158, 11, 0.40);
+    border-left: 3px solid var(--c-weak);
+    border-radius: var(--radius-md);
+    background: var(--c-weak-bg);
+  }
+  .coverage-error-header {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2);
+    color: var(--c-weak);
+    font-size: var(--type-sm);
+  }
+  .coverage-error-header svg { flex-shrink: 0; margin-top: 1px; }
+  .coverage-error-header strong { font-weight: 600; }
+  .coverage-error-steps {
+    margin: var(--space-2) 0 0 var(--space-5);
+    padding: 0;
+    list-style: disc;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .coverage-error-steps li {
+    font-size: var(--type-xs);
+    color: var(--fg);
+    font-family: var(--vscode-editor-font-family);
+    line-height: 1.5;
+  }
+  .coverage-error-footer {
+    margin-top: var(--space-3);
+  }
+  .coverage-error-ai {
+    margin-top: var(--space-3);
+    padding: var(--space-3);
+    border-radius: var(--radius-md);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    font-size: var(--type-sm);
+    line-height: 1.6;
+    white-space: pre-wrap;
+  }
+  .coverage-error-ai[hidden] { display: none; }
 
   .empty {
     color: var(--muted);

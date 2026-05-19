@@ -5,6 +5,7 @@
 
 | Stream | Type | Status | Agent | Last updated |
 |---|---|---|---|---|
+| [dashboard-responsive-guide-tab](dashboard-responsive-guide-tab.md) | bugfix | in-progress | claude-code | 2026-05-18 |
 | [detective-redesign](archive/detective-redesign.md) | feature | closed | claude-code | 2026-05-16 |
 
 ---

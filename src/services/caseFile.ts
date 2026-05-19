@@ -63,6 +63,11 @@ export type CaseFileAiReview =
       error: string;
     };
 
+export type CoverageError = {
+  message: string;
+  steps: string[];
+};
+
 export type CaseFileBundle = {
   scanTimestamp: number;
   project?: TestProject;
@@ -81,6 +86,8 @@ export type CaseFileBundle = {
     generatedAt?: number;
     command?: string;
   };
+  /** Set when the last coverage attempt failed so the dashboard can show inline guidance. */
+  coverageError?: CoverageError;
 };
 
 export type SynthesizeInput = {

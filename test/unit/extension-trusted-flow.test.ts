@@ -78,7 +78,7 @@ test('extension command callbacks handle trusted workspace alternate outcomes', 
 
   assert.ok(calls.includes('scan:/repo'));
   assert.match(outputLines.join('\n'), /skipped 1 support fixture/);
-  assert.match(warningMessages.join('\n'), /no explicit coverage command/);
+  assert.match(warningMessages.join('\n'), /no coverage script found/);
   assert.match(warningMessages.join('\n'), /current file is not inside a detected test project/);
 });
 
@@ -88,26 +88,28 @@ test('extension coverage command handles cancel, failed runs, and missing output
 
   const failed = await runCoverageScenario({
     warningChoice: 'Run coverage',
-    coverageResult: { runs: [{ projectId: 'node:/repo', command: 'npm run coverage', exitCode: 1 }], coverage: [] },
+    coverageResult: { runs: [{ projectId: 'node:/repo', command: 'npm run coverage', exitCode: 1, stderr: 'jest error' }], coverage: [] },
   });
-  assert.match(failed.error?.message ?? '', /Coverage failed/);
+  assert.match(failed.errorMessages.join('\n'), /coverage command failed/);
 
   const missing = await runCoverageScenario({
     warningChoice: 'Run coverage',
-    coverageResult: { runs: [{ projectId: 'node:/repo', command: 'npm run coverage', exitCode: 0 }], coverage: [] },
+    coverageResult: { runs: [{ projectId: 'node:/repo', command: 'npm run coverage', exitCode: 0, stderr: '' }], coverage: [] },
   });
-  assert.match(missing.error?.message ?? '', /no supported coverage file/);
+  assert.match(missing.errorMessages.join('\n'), /no output file/);
 });
 
 async function runCoverageScenario(options: {
   warningChoice?: string;
-  coverageResult?: { runs: Array<{ projectId: string; command: string; exitCode: number }>; coverage: unknown[] };
-} = {}): Promise<{ calls: string[]; error?: Error }> {
+  coverageResult?: { runs: Array<{ projectId: string; command: string; exitCode: number; stderr?: string }>; coverage: unknown[] };
+} = {}): Promise<{ calls: string[]; errorMessages: string[] }> {
   const callbacks = new Map<string, (...args: unknown[]) => Promise<unknown>>();
+  const errorMessages: string[] = [];
   const vscode = vscodeActivationMock({
     registeredCommands: [],
     registeredViews: [],
     outputLines: [],
+    errorMessages,
     callbacks,
     trusted: true,
     warningChoice: options.warningChoice,
@@ -119,12 +121,8 @@ async function runCoverageScenario(options: {
     coverageResult: options.coverageResult,
   });
   activate(contextFixture() as never);
-  try {
-    await callbacks.get('testInspector.generateCoverage')?.();
-    return { calls };
-  } catch (err) {
-    return { calls, error: err instanceof Error ? err : new Error(String(err)) };
-  }
+  await callbacks.get('testInspector.generateCoverage')?.();
+  return { calls, errorMessages };
 }
 
 function loadExtensionWithDependencyMocks<T>(
@@ -230,6 +228,10 @@ function coverageControllerMock(
 ) {
   return {
     buildCoveragePlan: async () => plan ?? ({ planned: [project], skipped: [], skippedSupport: 0 }),
+    buildCoverageSetupHints: () => [],
+    coverageErrorForNoScript: () => ({ message: 'no script', steps: [] }),
+    coverageErrorForFailedRun: () => ({ message: 'Coverage failed', steps: [] }),
+    coverageErrorForMissingFile: () => ({ message: 'no output file', steps: [] }),
     formatCoveragePreview: () => 'npm run coverage',
     generateCoverageForPlan: async () => {
       calls.push('coverage');
@@ -254,6 +256,7 @@ function vscodeActivationMock(opts: {
   outputLines: string[];
   infoMessages?: string[];
   warningMessages?: string[];
+  errorMessages?: string[];
   callbacks?: Map<string, (...args: unknown[]) => Promise<unknown>>;
   trusted?: boolean;
   workspaceFolders?: Array<{ uri: { fsPath: string } }>;
@@ -279,6 +282,7 @@ function vscodeActivationMock(opts: {
       registerTreeDataProvider: (viewId: string) => { opts.registeredViews.push(viewId); return disposable; },
       registerWebviewViewProvider: (viewId: string) => { opts.registeredViews.push(viewId); return disposable; },
       showWarningMessage: async (message: string) => { opts.warningMessages?.push(message); return opts.warningChoice; },
+      showErrorMessage: async (message: string) => { opts.errorMessages?.push(message); return undefined; },
       showInformationMessage: async (message: string) => { opts.infoMessages?.push(message); return undefined; },
       withProgress: async (_opts: unknown, task: () => Promise<unknown>) => task(),
     },

@@ -5,7 +5,14 @@ import * as path from 'node:path';
 import Module = require('node:module');
 import { test } from 'node:test';
 import { NodeAdapter } from '../../src/adapters/node';
-import { buildCoveragePlan, formatCoveragePreview, generateCoverageForPlan } from '../../src/services/coverageController';
+import {
+  buildCoveragePlan,
+  coverageErrorForFailedRun,
+  coverageErrorForMissingFile,
+  coverageErrorForNoScript,
+  formatCoveragePreview,
+  generateCoverageForPlan,
+} from '../../src/services/coverageController';
 import { coverageCommandPreview } from '../../src/services/runner';
 import { parseLcov } from '../../src/services/coverage';
 import type { CoverageSummary, TestProject, TestRunResult } from '../../src/models';
@@ -153,6 +160,91 @@ function runResult(project: TestProject, exitCode: number): TestRunResult {
     endedAt: 2,
   };
 }
+
+// ---------------------------------------------------------------------------
+// coverageErrorForNoScript
+// ---------------------------------------------------------------------------
+
+test('coverageErrorForNoScript returns message with project label and framework-specific steps for node', () => {
+  const err = coverageErrorForNoScript([projectFixture('node', { label: 'My API' })]);
+  assert.match(err.message, /My API/);
+  assert.match(err.message, /node/);
+  assert.ok(err.steps.some((s) => /jest/.test(s) || /vitest/.test(s) || /c8/.test(s)));
+});
+
+test('coverageErrorForNoScript returns react-specific steps', () => {
+  const err = coverageErrorForNoScript([projectFixture('react', { label: 'Web app' })]);
+  assert.match(err.message, /Web app/);
+  assert.ok(err.steps.some((s) => /react-scripts/.test(s) || /jest/.test(s)));
+});
+
+test('coverageErrorForNoScript returns django-specific steps', () => {
+  const err = coverageErrorForNoScript([projectFixture('django', { label: 'Backend' })]);
+  assert.ok(err.steps.some((s) => /manage\.py/.test(s) || /coverage/.test(s)));
+});
+
+test('coverageErrorForNoScript returns fastapi-specific steps', () => {
+  const err = coverageErrorForNoScript([projectFixture('fastapi', { label: 'API' })]);
+  assert.ok(err.steps.some((s) => /pytest/.test(s)));
+});
+
+test('coverageErrorForNoScript handles multiple skipped projects', () => {
+  const err = coverageErrorForNoScript([
+    projectFixture('node', { label: 'Server' }),
+    projectFixture('react', { label: 'Client' }),
+  ]);
+  assert.match(err.message, /Server/);
+  assert.match(err.message, /Client/);
+  assert.ok(err.steps.length >= 2);
+});
+
+// ---------------------------------------------------------------------------
+// coverageErrorForFailedRun
+// ---------------------------------------------------------------------------
+
+test('coverageErrorForFailedRun with stderr shows snippet in steps', () => {
+  const err = coverageErrorForFailedRun([{
+    projectId: 'node:/repo/my-app',
+    exitCode: 1,
+    stdout: '',
+    stderr: 'Error: Cannot find module "jest"\n  at Object.<anonymous>\n  at Module._resolveFilename',
+  }]);
+  assert.match(err.message, /my-app/);
+  assert.ok(err.steps.some((s) => /Cannot find module/.test(s)));
+});
+
+test('coverageErrorForFailedRun with no output produces actionable unknown-cause message', () => {
+  const err = coverageErrorForFailedRun([{
+    projectId: 'node:/repo/my-app',
+    exitCode: 1,
+    stdout: '',
+    stderr: '',
+  }]);
+  assert.match(err.message, /my-app/);
+  assert.ok(err.steps.some((s) => /npm run coverage/.test(s) || /terminal/.test(s)));
+});
+
+test('coverageErrorForFailedRun strips long path from project id for readability', () => {
+  const err = coverageErrorForFailedRun([{
+    projectId: 'node:/Users/danil/projects/very-long-path/my-project',
+    exitCode: 2,
+    stdout: '',
+    stderr: '',
+  }]);
+  assert.match(err.message, /my-project/);
+  assert.doesNotMatch(err.message, /Users\/danil/);
+});
+
+// ---------------------------------------------------------------------------
+// coverageErrorForMissingFile
+// ---------------------------------------------------------------------------
+
+test('coverageErrorForMissingFile message explains no output file was found', () => {
+  const err = coverageErrorForMissingFile();
+  assert.match(err.message, /report file|output file|no report/i);
+  assert.ok(err.steps.some((s) => /lcov|coverage-summary|xml/.test(s)));
+  assert.ok(err.steps.some((s) => /terminal|manually/.test(s)));
+});
 
 function loadCoverageControllerWithRunnerMock(runs: TestRunResult[]): typeof import('../../src/services/coverageController') {
   const loader = Module as unknown as { _load: (...args: unknown[]) => unknown };

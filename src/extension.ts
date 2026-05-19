@@ -4,8 +4,8 @@ import { createAdapters } from './adapters';
 import { createAiReviewer, configureLlm } from './services/aiReviewController';
 import { emptyBundle, type CaseFileBundle } from './services/caseFile';
 import { CaseFileScanner, detectScannableProjects } from './services/caseFileScanner';
-import { buildCoveragePlan, formatCoveragePreview, generateCoverageForPlan } from './services/coverageController';
-import { createProviderRegistry } from './services/llm';
+import { buildCoveragePlan, buildCoverageSetupHints, coverageErrorForFailedRun, coverageErrorForMissingFile, coverageErrorForNoScript, formatCoveragePreview, generateCoverageForPlan } from './services/coverageController';
+import { activeProvider, createProviderRegistry } from './services/llm';
 import { generateCaseFileReportForSelection } from './services/reportController';
 import { ReviewedStore } from './services/reviewed';
 import { TargetController, type ActiveTarget } from './services/targetController';
@@ -28,6 +28,33 @@ export function activate(context: vscode.ExtensionContext): void {
   const adapters = createAdapters();
   const llmRegistry = safeCreateProviderRegistry(context, output);
   const reviewCaseWithAi = createAiReviewer(llmRegistry, output);
+
+  const explainErrorWithAi = async (ctx: { message: string; steps: string[] }): Promise<string> => {
+    const provider = activeProvider(llmRegistry);
+    if (!provider) {
+      return 'No AI key configured. Click the 🔑 key button in the sidebar to set one up.';
+    }
+    const errorSummary = [ctx.message, ...ctx.steps.slice(0, 2)].join(' ');
+    const result = await provider.complete({
+      system: 'You are a debugging assistant. Reply ONLY with this JSON shape, nothing else: {"explanation":"...","fix":"..."}',
+      user: `Coverage command failed: ${errorSummary.slice(0, 400)}\n\nIn one sentence each: what went wrong? What is the single most important fix?`,
+      maxTokens: 800,
+      temperature: 0,
+    });
+    if (!result.ok) return `AI could not respond: ${result.error}`;
+    try {
+      const parsed = JSON.parse(result.text) as Record<string, unknown>;
+      const explanation = String(parsed.explanation ?? '').trim();
+      const fix = String(parsed.fix ?? '').trim();
+      return [explanation, fix].filter(Boolean).join('\n\n');
+    } catch {
+      // Truncated JSON — extract what we can
+      const expMatch = result.text.match(/"explanation"\s*:\s*"([^"]+)"/);
+      const fixMatch = result.text.match(/"fix"\s*:\s*"([^"]+)"/);
+      const parts = [expMatch?.[1], fixMatch?.[1]].filter(Boolean);
+      return parts.length ? parts.join('\n\n') : result.text.replace(/[{}"]/g, '').trim();
+    }
+  };
   const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
   const reviewed = workspaceRoot ? new ReviewedStore(workspaceRoot) : null;
   const scanner = new CaseFileScanner(adapters, output, reviewed);
@@ -52,7 +79,7 @@ export function activate(context: vscode.ExtensionContext): void {
       return;
     }
 
-    const panel = CaseFilePanel.show(context, { onAiReview: reviewCaseWithAi });
+    const panel = CaseFilePanel.show(context, { onAiReview: reviewCaseWithAi, onExplainError: explainErrorWithAi });
     const target = targetOverride ?? targetController.target;
     const scope = target
       ? {
@@ -119,8 +146,15 @@ export function activate(context: vscode.ExtensionContext): void {
       output.appendLine(`[coverage] skipped ${plan.skippedSupport} support fixture project(s)`);
     }
     if (plan.planned.length === 0) {
-      const skipped = plan.skipped.map((project) => project.label).join(', ') || 'No projects';
-      void vscode.window.showWarningMessage(`Test Inspector: no explicit coverage command configured. Skipped: ${skipped}.`);
+      const hints = buildCoverageSetupHints(plan.skipped);
+      hints.forEach((line) => output.appendLine(line));
+      const coverageError = coverageErrorForNoScript(plan.skipped);
+      CaseFilePanel.show(context, { onAiReview: reviewCaseWithAi, onExplainError: explainErrorWithAi }).update({ ...latestBundle, coverageError });
+      const action = await vscode.window.showWarningMessage(
+        `Test Inspector: no coverage script found. See the dashboard for setup instructions.`,
+        'Open Output'
+      );
+      if (action === 'Open Output') output.show();
       return false;
     }
 
@@ -143,10 +177,34 @@ export function activate(context: vscode.ExtensionContext): void {
     );
     const failed = result.runs.filter((run) => run.exitCode !== 0);
     if (failed.length > 0) {
-      throw new Error(`Coverage failed for ${failed.map((run) => run.projectId).join(', ')}.`);
+      for (const run of failed) {
+        output.appendLine(`[coverage] FAILED (exit ${run.exitCode}): ${run.command}`);
+        if (run.stdout?.trim()) output.appendLine(run.stdout.trim());
+        if (run.stderr?.trim()) output.appendLine(run.stderr.trim());
+        if (!run.stdout?.trim() && !run.stderr?.trim()) {
+          output.appendLine('[coverage] No output captured. If using --test-reporter=lcov only, run "npm test" to see failures.');
+        }
+      }
+      const coverageError = coverageErrorForFailedRun(failed);
+      CaseFilePanel.show(context, { onAiReview: reviewCaseWithAi, onExplainError: explainErrorWithAi }).update({ ...latestBundle, coverageError });
+      const action = await vscode.window.showErrorMessage(
+        `Test Inspector: coverage command failed. See the dashboard for details.`,
+        'Open Output'
+      );
+      if (action === 'Open Output') output.show();
+      return false;
     }
     if (result.coverage.length === 0) {
-      throw new Error('Coverage command finished, but no supported coverage file was found.');
+      output.appendLine('[coverage] Command exited 0 but no coverage file was found.');
+      output.appendLine('[coverage] Expected one of: lcov.info, coverage-summary.json, coverage-final.json, coverage.xml, .coverage');
+      const coverageError = coverageErrorForMissingFile();
+      CaseFilePanel.show(context, { onAiReview: reviewCaseWithAi, onExplainError: explainErrorWithAi }).update({ ...latestBundle, coverageError });
+      const action = await vscode.window.showErrorMessage(
+        'Test Inspector: coverage ran but produced no output file. See the dashboard for details.',
+        'Open Output'
+      );
+      if (action === 'Open Output') output.show();
+      return false;
     }
     latestSuccessfulRun = {
       generatedAt: Date.now(),
@@ -195,7 +253,7 @@ export function activate(context: vscode.ExtensionContext): void {
       latestBundle = bundle;
       casesView.update(bundle);
       reportsView.update(bundle);
-      CaseFilePanel.show(context, { onAiReview: reviewCaseWithAi }).update(bundle);
+      CaseFilePanel.show(context, { onAiReview: reviewCaseWithAi, onExplainError: explainErrorWithAi }).update(bundle);
     }
   });
 
@@ -221,8 +279,8 @@ export function activate(context: vscode.ExtensionContext): void {
     output.appendLine(`[activate] registered ${command}`);
   };
 
-  registerCommand('testInspector.openCaseFile', () => CaseFilePanel.show(context, { onAiReview: reviewCaseWithAi }));
-  registerCommand('testInspector.openDashboard', () => CaseFilePanel.show(context, { onAiReview: reviewCaseWithAi }));
+  registerCommand('testInspector.openCaseFile', () => CaseFilePanel.show(context, { onAiReview: reviewCaseWithAi, onExplainError: explainErrorWithAi }));
+  registerCommand('testInspector.openDashboard', () => CaseFilePanel.show(context, { onAiReview: reviewCaseWithAi, onExplainError: explainErrorWithAi }));
   registerCommand('testInspector.scan', () => scanWorkspace());
   registerCommand('testInspector.refresh', () => scanWorkspace(targetController.target ?? undefined, targetController.featureScope.label));
   registerCommand('testInspector.refreshAll', () => scanWorkspace(targetController.target ?? undefined, targetController.featureScope.label));

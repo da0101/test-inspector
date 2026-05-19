@@ -9,10 +9,12 @@ type IncomingMessage =
   | { type: 'evidence'; path?: string }
   | { type: 'aiReview'; path?: string }
   | { type: 'review'; path?: string }
-  | { type: 'rescan'; path?: string };
+  | { type: 'rescan'; path?: string }
+  | { type: 'explainCoverageError'; text?: string };
 
 type CaseFilePanelOptions = {
   onAiReview?: (caseFile: CaseFile, bundle: CaseFileBundle) => Promise<CaseFileAiReview>;
+  onExplainError?: (context: { message: string; steps: string[] }) => Promise<string>;
 };
 
 export class CaseFilePanel {
@@ -93,6 +95,35 @@ export class CaseFilePanel {
       case 'evidence':
         // Handled client-side in the webview script (toggle visibility).
         return;
+      case 'explainCoverageError':
+        if (msg.text) {
+          void this.explainCoverageError(msg.text);
+        }
+        return;
+    }
+  }
+
+  private async explainCoverageError(context: string): Promise<void> {
+    if (!this.options.onExplainError) {
+      void this.panel.webview.postMessage({
+        type: 'coverageErrorExplanation',
+        text: 'No AI key configured. Click the 🔑 key button in the sidebar to set one up, then try again.',
+      });
+      return;
+    }
+    let parsed: { message?: string; steps?: string[] } = {};
+    try { parsed = JSON.parse(context); } catch { /* use empty */ }
+    try {
+      const text = await this.options.onExplainError({
+        message: parsed.message ?? 'Coverage command failed',
+        steps: parsed.steps ?? [],
+      });
+      void this.panel.webview.postMessage({ type: 'coverageErrorExplanation', text });
+    } catch (err) {
+      void this.panel.webview.postMessage({
+        type: 'coverageErrorExplanation',
+        text: `AI request failed: ${err instanceof Error ? err.message : String(err)}`,
+      });
     }
   }
 

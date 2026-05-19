@@ -15,6 +15,7 @@ export const SCRIPT = `
   const savedState = vscode.getState() || {};
   let verdictFilter = typeof savedState.verdictFilter === 'string' ? savedState.verdictFilter : '*';
   let projectFilter = typeof savedState.projectFilter === 'string' ? savedState.projectFilter : '*';
+  let guideActive = savedState.guideActive === true;
 
   function saveState() {
     const prev = vscode.getState() || {};
@@ -22,7 +23,23 @@ export const SCRIPT = `
       ...prev,
       verdictFilter,
       projectFilter,
+      guideActive,
       scrollY: window.scrollY,
+    });
+  }
+
+  function applyGuideView() {
+    const panel = document.getElementById('guide-panel');
+    const casesContainer = document.getElementById('cases-container');
+    const kpiStrip = document.querySelector('.kpi-strip');
+    if (panel) panel.hidden = !guideActive;
+    if (casesContainer) casesContainer.style.display = guideActive ? 'none' : '';
+    if (kpiStrip) kpiStrip.style.display = guideActive ? 'none' : '';
+    document.querySelectorAll('.tab').forEach((t) => {
+      if (t.getAttribute('data-project') === '__guide__') {
+        t.classList.toggle('active', guideActive);
+        t.setAttribute('aria-selected', String(guideActive));
+      }
     });
   }
 
@@ -106,14 +123,23 @@ export const SCRIPT = `
     });
   });
 
-  // Tab click = switch project scope (exclusive, like radio)
+  // Tab click = switch project scope (exclusive, like radio), or show Guide panel
   document.querySelectorAll('.tab').forEach((tab) => {
     tab.addEventListener('click', () => {
-      projectFilter = tab.getAttribute('data-project');
+      const project = tab.getAttribute('data-project');
+      if (project === '__guide__') {
+        guideActive = true;
+        applyGuideView();
+        saveState();
+        return;
+      }
+      guideActive = false;
+      projectFilter = project;
       verdictFilter = '*';
       // Smooth scroll back to top so the new scope reads from card 1
       window.scrollTo({ top: 0, behavior: 'smooth' });
       applyFilter();
+      applyGuideView();
       saveState();
     });
   });
@@ -122,7 +148,9 @@ export const SCRIPT = `
   document.getElementById('clear-filters')?.addEventListener('click', () => {
     verdictFilter = '*';
     projectFilter = '*';
+    guideActive = false;
     applyFilter();
+    applyGuideView();
     saveState();
   });
 
@@ -145,6 +173,15 @@ export const SCRIPT = `
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
       const cmd = btn.dataset.cmd;
+
+      // Coverage error AI explanation — show response inline in the banner.
+      if (cmd === 'explainCoverageError') {
+        btn.innerHTML = '<span class="spinner"></span><span>Asking AI…</span>';
+        btn.classList.add('busy');
+        btn.disabled = true;
+        vscode.postMessage({ type: 'explainCoverageError', text: btn.dataset.context });
+        return;
+      }
 
       // Evidence toggle is handled client-side — no roundtrip.
       if (cmd === 'evidence') {
@@ -189,10 +226,29 @@ export const SCRIPT = `
     });
   });
 
+  // Handle messages from the extension host (AI responses, etc.)
+  window.addEventListener('message', (event) => {
+    const msg = event.data;
+    if (msg?.type === 'coverageErrorExplanation') {
+      const aiBox = document.getElementById('coverage-ai-response');
+      const askBtn = document.querySelector('button[data-cmd="explainCoverageError"]');
+      if (aiBox) {
+        aiBox.removeAttribute('hidden');
+        aiBox.textContent = msg.text || 'No explanation returned.';
+      }
+      if (askBtn) {
+        askBtn.textContent = 'Ask AI again';
+        askBtn.classList.remove('busy');
+        askBtn.disabled = false;
+      }
+    }
+  });
+
   // Initial state — applyFilter renders the current filter set, then we
   // restore the saved scroll position once the layout has settled.
   applyFilter();
-  if (typeof savedState.scrollY === 'number' && savedState.scrollY > 0) {
+  applyGuideView();
+  if (!guideActive && typeof savedState.scrollY === 'number' && savedState.scrollY > 0) {
     requestAnimationFrame(() => {
       window.scrollTo({ top: savedState.scrollY, behavior: 'auto' });
     });

@@ -1,4 +1,4 @@
-import type { CaseFileBundle } from '../../services/caseFile';
+import type { CaseFileBundle, CoverageError } from '../../services/caseFile';
 import { VERDICT_ORDER } from './template/constants';
 import { projectsById, renderCase, renderKpiTile, renderTab } from './template/render';
 import { SCRIPT } from './template/script';
@@ -21,6 +21,7 @@ export function renderCaseFileHtml(bundle: CaseFileBundle, opts: RenderOptions):
     .map((v) => renderKpiTile(v, bundle.totals[v] ?? 0, total))
     .join('');
   const runtimeEvidence = renderRuntimeEvidence(bundle);
+  const coverageErrorBanner = bundle.coverageError ? renderCoverageError(bundle.coverageError) : '';
   const metricGuide = renderMetricGuide();
 
   const projectIds = new Set(bundle.cases.map((c) => c.target.projectId));
@@ -34,6 +35,7 @@ export function renderCaseFileHtml(bundle: CaseFileBundle, opts: RenderOptions):
             return renderTab({ projectId: p.id, label: p.label || p.id, count, framework: p.framework, active: false });
           })
           .join('')}
+        <button class="tab" data-project="__guide__" role="tab" aria-selected="false">Guide</button>
       </div>`
     : '';
 
@@ -69,12 +71,17 @@ export function renderCaseFileHtml(bundle: CaseFileBundle, opts: RenderOptions):
     <p class="hero-subtitle">${subtitle}</p>
     ${scopeLine}
     ${tabs}
-    ${runtimeEvidence}
-    ${metricGuide}
     ${total > 0 ? `<div class="kpi-strip">${kpiTiles}</div>` : ''}
   </header>
   <main>
-    ${renderedCases || empty}
+    ${runtimeEvidence}
+    ${coverageErrorBanner}
+    <section id="guide-panel" class="guide-panel" hidden>
+      ${metricGuide}
+    </section>
+    <div id="cases-container">
+      ${renderedCases || empty}
+    </div>
   </main>
   <script nonce="${opts.nonce}">${SCRIPT}</script>
 </body>
@@ -111,20 +118,18 @@ function renderRuntimeEvidence(bundle: CaseFileBundle): string {
 
 function renderMetricGuide(): string {
   return `
-    <details class="metric-guide">
-      <summary>Metric guide</summary>
-      <div class="metric-guide-grid">
-        <div><strong>Case cards</strong><span>Actionable findings shown below. One card can represent a test file or a source file.</span></div>
-        <div><strong>Test files</strong><span>Actual test files discovered and inspected for quality signals.</span></div>
-        <div><strong>Test cases</strong><span>Individual test declarations discovered; after Generate Coverage, passing/total from the successful run.</span></div>
-        <div><strong>Lines</strong><span>Executable source lines hit by tests.</span></div>
-        <div><strong>Branches</strong><span>Decision paths hit by tests, when reported.</span></div>
-        <div><strong>Functions</strong><span>Functions hit by tests, when reported.</span></div>
-        <div><strong>Strong test files</strong><span>Test files with no static weak/theater signals; not executed test count.</span></div>
-        <div><strong>Missing source files</strong><span>Critical source files with no related test evidence or effectively no coverage.</span></div>
-        <div><strong>Theater / Weak</strong><span>Case cards with fake, shallow, fragile, or low-coverage evidence.</span></div>
-      </div>
-    </details>
+    <h2 class="guide-heading">Metric guide</h2>
+    <div class="metric-guide-grid">
+      <div><strong>Case cards</strong><span>Actionable findings shown below. One card can represent a test file or a source file.</span></div>
+      <div><strong>Test files</strong><span>Actual test files discovered and inspected for quality signals.</span></div>
+      <div><strong>Test cases</strong><span>Individual test declarations discovered; after Generate Coverage, passing/total from the successful run.</span></div>
+      <div><strong>Lines</strong><span>Executable source lines hit by tests.</span></div>
+      <div><strong>Branches</strong><span>Decision paths hit by tests, when reported.</span></div>
+      <div><strong>Functions</strong><span>Functions hit by tests, when reported.</span></div>
+      <div><strong>Strong test files</strong><span>Test files with no static weak/theater signals; not executed test count.</span></div>
+      <div><strong>Missing source files</strong><span>Critical source files with no related test evidence or effectively no coverage.</span></div>
+      <div><strong>Theater / Weak</strong><span>Case cards with fake, shallow, fragile, or low-coverage evidence.</span></div>
+    </div>
   `;
 }
 
@@ -154,4 +159,26 @@ function escapeInline(value: string): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+function renderCoverageError(err: CoverageError): string {
+  const steps = err.steps
+    .map((s) => `<li>${escapeInline(s)}</li>`)
+    .join('');
+  const context = escapeInline(JSON.stringify({ message: err.message, steps: err.steps }));
+  return `
+    <section class="coverage-error" aria-label="Coverage setup issue">
+      <div class="coverage-error-header">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-3a.75.75 0 0 1 .75.75v3a.75.75 0 0 1-1.5 0v-3A.75.75 0 0 1 8 5Zm0 6.5a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z" fill="currentColor"/>
+        </svg>
+        <strong>${escapeInline(err.message)}</strong>
+      </div>
+      ${steps ? `<ul class="coverage-error-steps">${steps}</ul>` : ''}
+      <div class="coverage-error-footer">
+        <button class="btn" data-cmd="explainCoverageError" data-context="${context}">Ask AI to explain this</button>
+      </div>
+      <div class="coverage-error-ai" id="coverage-ai-response" hidden></div>
+    </section>
+  `;
 }
